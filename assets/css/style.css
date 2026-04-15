@@ -132,7 +132,8 @@ body {
 .controls {
   position: fixed;
   left: 50%;
-  bottom: 15%;
+  top: calc(70% + 5px);
+  bottom: auto;
   transform: translateX(-50%);
   min-height: 56px;
   display: grid;
@@ -142,6 +143,7 @@ body {
 }
 
 .slide-subtitle.is-hidden + .controls:not(.is-choice) {
+  top: auto;
   bottom: 30%;
 }
 
