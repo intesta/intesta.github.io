@@ -241,11 +241,8 @@ function onTouchEnd(event) {
       return;
     }
 
-    // First slide uses vertical scroll gesture:
-    // finger swipes up (content scrolls down) to continue.
-    if (diffY < 0) {
-      next();
-    }
+    // First slide accepts both vertical directions.
+    next();
     return;
   }
 
