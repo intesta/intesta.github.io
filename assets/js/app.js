@@ -43,6 +43,8 @@ if (!slidesContainer || !subtitleEl || !announcerEl || !controlsEl) {
 }
 
 let current = 0;
+let touchStartX = 0;
+let touchStartY = 0;
 let isAnimating = false;
 let wheelLocked = false;
 let isChoiceAnimating = false;
@@ -260,6 +262,61 @@ function next() {
   }
 }
 
+function onTouchStart(event) {
+  if (!event.changedTouches || event.changedTouches.length === 0) {
+    return;
+  }
+  const touch = event.changedTouches[0];
+  touchStartX = touch.clientX;
+  touchStartY = touch.clientY;
+}
+
+function onTouchEnd(event) {
+  if (!event.changedTouches || event.changedTouches.length === 0) {
+    return;
+  }
+
+  if (slides[current].layout === "profile") {
+    return;
+  }
+
+  const touch = event.changedTouches[0];
+  const diffX = touch.clientX - touchStartX;
+  const diffY = touch.clientY - touchStartY;
+  const minDistance = 32;
+  const minDistanceFirstSlide = 22;
+
+  if (current === 0) {
+    if (Math.abs(diffY) < minDistanceFirstSlide) {
+      return;
+    }
+
+    next();
+    return;
+  }
+
+  if (slides[current].control === "choice") {
+    if (Math.abs(diffX) < minDistance || Math.abs(diffX) < Math.abs(diffY)) {
+      return;
+    }
+
+    if (diffX < 0) {
+      handleChoice("no");
+    } else {
+      handleChoice("yes");
+    }
+    return;
+  }
+
+  if (Math.abs(diffX) < minDistance || Math.abs(diffX) < Math.abs(diffY)) {
+    return;
+  }
+
+  if (diffX < 0) {
+    next();
+  }
+}
+
 function onWheel(event) {
   if (wheelLocked || slides[current].control === "choice") {
     return;
@@ -288,6 +345,8 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
+window.addEventListener("touchstart", onTouchStart, { passive: true });
+window.addEventListener("touchend", onTouchEnd, { passive: true });
 window.addEventListener("wheel", onWheel, { passive: true });
 
 paint(current);
