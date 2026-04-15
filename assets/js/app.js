@@ -70,7 +70,7 @@ const slideEls = slides.map((slideData) => {
           Vivo a Faenza ed ho 21 anni, Ho bisogno del tuo aiuto per il mio progetto di tesi
           che tratta il tema dell’utilizzo del casco tra noi giovani.
           Ho realizzato appositamente per voi un attività, se sei un creativo te la consiglio!
-          puoi trovare l’invito all’interno del sito e per informazioni non esitare a contattarmi.
+          Puoi trovare l’invito all’interno del sito e per informazioni non esitare a contattarmi.
         </p>
         <p class="profile-contact">
           +39 331 380 99 22<br />
