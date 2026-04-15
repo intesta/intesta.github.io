@@ -46,7 +46,7 @@ body {
 }
 
 .slides {
-  position: absolute;
+  position: fixed;
   inset: 0;
   display: grid;
   place-items: center;
@@ -54,7 +54,7 @@ body {
 }
 
 .slide {
-  position: absolute;
+  position: fixed;
   inset: 0;
   display: grid;
   place-items: center;
@@ -82,17 +82,21 @@ body {
 }
 
 .slide-title {
+  position: fixed;
+  top: 50%;
+  left: 50%;
   font-size: clamp(2.2rem, 11vw, 4rem);
   font-weight: 700;
   letter-spacing: -0.025em;
   text-align: center;
   line-height: 1.05;
   color: #0a0d11;
-  transform: translateY(0);
+  transform: translate(-50%, -50%) translateX(var(--title-shift, 0));
+  transition: transform 220ms ease, opacity 220ms ease;
 }
 
 .bottom {
-  position: absolute;
+  position: fixed;
   left: 0;
   right: 0;
   bottom: max(80px, calc(env(safe-area-inset-bottom) + 45px));
@@ -242,6 +246,23 @@ body {
   outline-offset: 2px;
 }
 
+#app.is-selecting-no .slide.is-active .slide-title {
+  --title-shift: -10px;
+}
+
+#app.is-selecting-yes .slide.is-active .slide-title {
+  --title-shift: 10px;
+}
+
+.choice-btn.is-picked {
+  transform: scale(1.12);
+  filter: saturate(1.12);
+}
+
+.choice-btn.is-picked i {
+  animation: choice-pulse 240ms ease-out 1;
+}
+
 #app.is-transitioning .slide-subtitle {
   transform: translateY(4px);
   opacity: 0.72;
@@ -266,14 +287,29 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .slide,
   .slide.is-active,
+  .slide-title,
   .slide-subtitle,
   .nav-btn,
   .choice-btn,
+  .choice-btn.is-picked i,
   #app.is-transitioning .slide-subtitle,
   #app.is-transitioning .nav-btn,
   #app.is-transitioning .choice-btn {
     transition: none;
     transform: none;
     filter: none;
+    animation: none;
+  }
+}
+
+@keyframes choice-pulse {
+  0% {
+    transform: scale(0.95);
+  }
+  60% {
+    transform: scale(1.14);
+  }
+  100% {
+    transform: scale(1);
   }
 }

@@ -7,6 +7,8 @@ const slides = [
   { title: "Utilizzi un casco?", subtitle: "", control: "choice" },
   { title: "Neanche io.", subtitle: "chi sono?", control: "dot" }
 ];
+const HELMET_SLIDE_INDEX = 3;
+const FINAL_SLIDE_INDEX = slides.length - 1;
 
 const app = document.querySelector("#app");
 
@@ -39,6 +41,8 @@ let touchStartX = 0;
 let touchStartY = 0;
 let isAnimating = false;
 let wheelLocked = false;
+let isChoiceAnimating = false;
+let hasHelmet = false;
 
 const slideEls = slides.map(({ title }) => {
   const section = document.createElement("section");
@@ -47,6 +51,50 @@ const slideEls = slides.map(({ title }) => {
   slidesContainer.append(section);
   return section;
 });
+
+function setChoiceAnimationState(choice, enabled) {
+  const noClass = "is-selecting-no";
+  const yesClass = "is-selecting-yes";
+
+  app.classList.remove(noClass, yesClass);
+  if (enabled) {
+    app.classList.add(choice === "no" ? noClass : yesClass);
+  }
+}
+
+function runChoiceAnimation(choice, onDone) {
+  const buttonSelector = choice === "no" ? ".choice-btn--no" : ".choice-btn--yes";
+  const button = controlsEl.querySelector(buttonSelector);
+  if (!(button instanceof HTMLElement)) {
+    onDone();
+    return;
+  }
+
+  isChoiceAnimating = true;
+  setChoiceAnimationState(choice, true);
+  button.classList.add("is-picked");
+
+  window.setTimeout(() => {
+    button.classList.remove("is-picked");
+    setChoiceAnimationState(choice, false);
+    isChoiceAnimating = false;
+    onDone();
+  }, 240);
+}
+
+function handleChoice(choice) {
+  if (isChoiceAnimating || slides[current].control !== "choice") {
+    return;
+  }
+
+  if (current === HELMET_SLIDE_INDEX) {
+    hasHelmet = choice === "yes";
+  }
+
+  runChoiceAnimation(choice, () => {
+    next();
+  });
+}
 
 function renderControls(controlType) {
   controlsEl.innerHTML = "";
@@ -76,11 +124,18 @@ function renderControls(controlType) {
       </button>
     `;
 
-    choices.querySelectorAll(".choice-btn").forEach((button) => {
-      button.addEventListener("click", () => {
-        next();
+    const noButton = choices.querySelector(".choice-btn--no");
+    const yesButton = choices.querySelector(".choice-btn--yes");
+    if (noButton instanceof HTMLElement) {
+      noButton.addEventListener("click", () => {
+        handleChoice("no");
       });
-    });
+    }
+    if (yesButton instanceof HTMLElement) {
+      yesButton.addEventListener("click", () => {
+        handleChoice("yes");
+      });
+    }
 
     controlsEl.append(choices);
     return;
@@ -95,6 +150,12 @@ function renderControls(controlType) {
 }
 
 function paint(index) {
+  const finalTitle = hasHelmet ? "Non sarà mai come questo" : "Neanche io.";
+  const finalTitleEl = slideEls[FINAL_SLIDE_INDEX]?.querySelector(".slide-title");
+  if (finalTitleEl instanceof HTMLElement) {
+    finalTitleEl.textContent = finalTitle;
+  }
+
   slideEls.forEach((slideEl, slideIndex) => {
     slideEl.classList.toggle("is-active", slideIndex === index);
   });
@@ -163,14 +224,25 @@ function onTouchEnd(event) {
     return;
   }
 
+  if (slides[current].control === "choice") {
+    if (Math.abs(diffX) < minDistance || Math.abs(diffX) < Math.abs(diffY)) {
+      return;
+    }
+
+    if (diffX < 0) {
+      handleChoice("no");
+    } else {
+      handleChoice("yes");
+    }
+    return;
+  }
+
   if (Math.abs(diffX) < minDistance || Math.abs(diffX) < Math.abs(diffY)) {
     return;
   }
 
   if (diffX < 0) {
     next();
-  } else {
-    goTo(current - 1);
   }
 
 }
@@ -191,9 +263,15 @@ function onWheel(event) {
 
 document.addEventListener("keydown", (event) => {
   if (event.key === "ArrowRight") {
-    next();
+    if (slides[current].control === "choice") {
+      handleChoice("yes");
+    } else {
+      next();
+    }
   } else if (event.key === "ArrowLeft") {
-    goTo(current - 1);
+    if (slides[current].control === "choice") {
+      handleChoice("no");
+    }
   }
 });
 
