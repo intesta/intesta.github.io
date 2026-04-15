@@ -38,6 +38,7 @@ let current = 0;
 let touchStartX = 0;
 let touchStartY = 0;
 let isAnimating = false;
+let wheelLocked = false;
 
 const slideEls = slides.map(({ title }) => {
   const section = document.createElement("section");
@@ -55,7 +56,7 @@ function renderControls(controlType) {
     button.className = "nav-btn nav-btn--down";
     button.type = "button";
     button.setAttribute("aria-label", "Scorri alla slide successiva");
-    button.innerHTML = `<i class="feather-arrow-down" aria-hidden="true"></i>`;
+    button.innerHTML = `<i class="feather-arrow-down-circle" aria-hidden="true"></i>`;
     button.addEventListener("click", () => {
       next();
     });
@@ -149,6 +150,18 @@ function onTouchEnd(event) {
   const diffY = touch.clientY - touchStartY;
   const minDistance = 32;
 
+  if (current === 0) {
+    if (Math.abs(diffY) < minDistance || Math.abs(diffY) < Math.abs(diffX)) {
+      return;
+    }
+
+    // First slide uses vertical gesture: swipe down to continue.
+    if (diffY > 0) {
+      next();
+    }
+    return;
+  }
+
   if (Math.abs(diffX) < minDistance || Math.abs(diffX) < Math.abs(diffY)) {
     return;
   }
@@ -161,6 +174,20 @@ function onTouchEnd(event) {
 
 }
 
+function onWheel(event) {
+  if (current !== 0 || wheelLocked) {
+    return;
+  }
+
+  if (event.deltaY > 8) {
+    wheelLocked = true;
+    next();
+    window.setTimeout(() => {
+      wheelLocked = false;
+    }, 350);
+  }
+}
+
 document.addEventListener("keydown", (event) => {
   if (event.key === "ArrowRight") {
     next();
@@ -171,5 +198,6 @@ document.addEventListener("keydown", (event) => {
 
 app.addEventListener("touchstart", onTouchStart, { passive: true });
 app.addEventListener("touchend", onTouchEnd, { passive: true });
+app.addEventListener("wheel", onWheel, { passive: true });
 
 paint(current);

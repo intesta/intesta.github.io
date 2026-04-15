@@ -39,11 +39,10 @@ body {
 }
 
 .slider {
+  position: relative;
   min-height: 100vh;
   display: grid;
-  grid-template-rows: 1fr auto;
-  align-items: end;
-  padding: clamp(24px, 7vw, 56px) clamp(18px, 5vw, 36px);
+  padding: clamp(24px, 7vw, 56px) clamp(18px, 5vw, 36px) 20px;
 }
 
 .slides {
@@ -93,10 +92,14 @@ body {
 }
 
 .bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 20px;
   display: grid;
   justify-items: center;
-  gap: 8px;
-  padding-bottom: clamp(42px, 12vh, 118px);
+  gap: 10px;
+  padding-bottom: 0;
 }
 
 .slide-subtitle {
@@ -117,7 +120,7 @@ body {
   min-height: 56px;
   display: grid;
   place-items: center;
-  margin-top: 8px;
+  margin-top: 10px;
 }
 
 .nav-btn {
@@ -178,8 +181,8 @@ body {
 .choice-group {
   display: flex;
   align-items: center;
-  gap: clamp(38px, 13vw, 72px);
-  transform: translateY(8px);
+  gap: clamp(56px, 16vw, 104px);
+  transform: translateY(10px);
 }
 
 .choice-btn {
