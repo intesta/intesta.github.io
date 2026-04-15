@@ -225,19 +225,29 @@ function next() {
 }
 
 function onTouchStart(event) {
+  if (!event.changedTouches || event.changedTouches.length === 0) {
+    return;
+  }
   const touch = event.changedTouches[0];
   touchStartX = touch.clientX;
   touchStartY = touch.clientY;
 }
 
 function onTouchEnd(event) {
+  if (!event.changedTouches || event.changedTouches.length === 0) {
+    return;
+  }
   const touch = event.changedTouches[0];
   const diffX = touch.clientX - touchStartX;
   const diffY = touch.clientY - touchStartY;
   const minDistance = 32;
+  const minDistanceFirstSlide = 18;
 
   if (current === 0) {
-    if (Math.abs(diffY) < minDistance || Math.abs(diffY) < Math.abs(diffX)) {
+    if (
+      Math.abs(diffY) < minDistanceFirstSlide ||
+      Math.abs(diffY) < Math.abs(diffX)
+    ) {
       return;
     }
 
@@ -274,7 +284,7 @@ function onWheel(event) {
     return;
   }
 
-  if (event.deltaY > 8) {
+  if (Math.abs(event.deltaY) > 8) {
     wheelLocked = true;
     next();
     window.setTimeout(() => {
@@ -297,8 +307,8 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
-app.addEventListener("touchstart", onTouchStart, { passive: true });
-app.addEventListener("touchend", onTouchEnd, { passive: true });
-app.addEventListener("wheel", onWheel, { passive: true });
+window.addEventListener("touchstart", onTouchStart, { passive: true });
+window.addEventListener("touchend", onTouchEnd, { passive: true });
+window.addEventListener("wheel", onWheel, { passive: true });
 
 paint(current);
