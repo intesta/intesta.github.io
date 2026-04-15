@@ -148,7 +148,7 @@ body {
 .controls.is-choice {
   left: var(--site-side);
   right: var(--site-side);
-  bottom: 30%;
+  bottom: 25%;
   transform: none;
   pointer-events: none;
 }
@@ -186,14 +186,17 @@ body {
 }
 
 .nav-btn--dot {
+  width: auto;
+  height: auto;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
   cursor: default;
 }
 
-.nav-btn-core {
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  background: #0d1116;
+.nav-btn--dot::after {
+  content: none;
 }
 
 .nav-btn::after {

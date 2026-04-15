@@ -108,7 +108,7 @@ function renderControls(controlType) {
     button.innerHTML = `
       <img
         class="icon-svg icon-svg--down"
-        src="./assets/images/chevrons-down%201.svg"
+        src="./assets/images/chevrons-down.svg"
         alt=""
         aria-hidden="true"
       />
@@ -127,7 +127,7 @@ function renderControls(controlType) {
       <button class="choice-btn choice-btn--no" type="button" aria-label="No, continua">
         <img
           class="icon-svg icon-svg--choice"
-          src="./assets/images/x%201.svg"
+          src="./assets/images/x.svg"
           alt=""
           aria-hidden="true"
         />
@@ -135,7 +135,7 @@ function renderControls(controlType) {
       <button class="choice-btn choice-btn--yes" type="button" aria-label="Sì, continua">
         <img
           class="icon-svg icon-svg--choice"
-          src="./assets/images/circle%202.svg"
+          src="./assets/images/circle.svg"
           alt=""
           aria-hidden="true"
         />
@@ -163,7 +163,14 @@ function renderControls(controlType) {
   button.className = "nav-btn nav-btn--dot";
   button.type = "button";
   button.setAttribute("aria-label", "Fine del percorso");
-  button.innerHTML = `<span class="nav-btn-core"></span>`;
+  button.innerHTML = `
+    <img
+      class="icon-svg icon-svg--down"
+      src="./assets/images/cerchio-e-punto.svg"
+      alt=""
+      aria-hidden="true"
+    />
+  `;
   controlsEl.append(button);
 }
 
