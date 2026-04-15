@@ -1,0 +1,24 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: Arial, sans-serif;
+  background-color: #f7f7f7;
+  background-image: radial-gradient(circle, #d5d5d5 1.2px, transparent 1.2px);
+  background-size: 24px 24px;
+  color: #111;
+}
+
+h1 {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-size: clamp(2rem, 8vw, 6rem);
+  letter-spacing: 0.1em;
+}
