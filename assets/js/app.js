@@ -241,17 +241,14 @@ function onTouchEnd(event) {
   const diffX = touch.clientX - touchStartX;
   const diffY = touch.clientY - touchStartY;
   const minDistance = 32;
-  const minDistanceFirstSlide = 18;
+  const minDistanceFirstSlide = 22;
 
   if (current === 0) {
-    if (
-      Math.abs(diffY) < minDistanceFirstSlide ||
-      Math.abs(diffY) < Math.abs(diffX)
-    ) {
+    if (Math.abs(diffY) < minDistanceFirstSlide) {
       return;
     }
 
-    // First slide accepts both vertical directions.
+    // First slide: any clear vertical swipe advances.
     next();
     return;
   }
