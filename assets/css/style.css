@@ -46,11 +46,11 @@ body {
 }
 
 .slides {
-  position: relative;
-  min-height: 100%;
+  position: absolute;
+  inset: 0;
   display: grid;
   place-items: center;
-  padding: 0 0 clamp(10px, 3vh, 28px);
+  pointer-events: none;
 }
 
 .slide {
@@ -88,14 +88,14 @@ body {
   text-align: center;
   line-height: 1.05;
   color: #0a0d11;
-  transform: translateY(3vh);
+  transform: translateY(0);
 }
 
 .bottom {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: max(50px, calc(env(safe-area-inset-bottom) + 30px));
+  bottom: max(58px, calc(env(safe-area-inset-bottom) + 36px));
   display: grid;
   justify-items: center;
   gap: 10px;
@@ -201,7 +201,7 @@ body {
   display: flex;
   align-items: center;
   gap: clamp(56px, 16vw, 104px);
-  transform: translateY(10px);
+  transform: translateY(6px);
 }
 
 .choice-btn {
