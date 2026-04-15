@@ -71,7 +71,7 @@ function renderControls(controlType) {
         <i class="feather-x-circle" aria-hidden="true"></i>
       </button>
       <button class="choice-btn choice-btn--yes" type="button" aria-label="Sì, continua">
-        <i class="feather-check-circle" aria-hidden="true"></i>
+        <i class="feather-arrow-right-circle" aria-hidden="true"></i>
       </button>
     `;
 

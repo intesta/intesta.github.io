@@ -51,7 +51,7 @@ body {
   min-height: 100%;
   display: grid;
   place-items: center;
-  padding-top: clamp(16vh, 22vh, 28vh);
+  padding: 0 0 clamp(10px, 3vh, 28px);
 }
 
 .slide {
@@ -89,17 +89,18 @@ body {
   text-align: center;
   line-height: 1.05;
   color: #0a0d11;
+  transform: translateY(3vh);
 }
 
 .bottom {
   display: grid;
   justify-items: center;
-  gap: 10px;
-  padding-bottom: clamp(18px, 5vh, 44px);
+  gap: 8px;
+  padding-bottom: clamp(42px, 12vh, 118px);
 }
 
 .slide-subtitle {
-  font-size: clamp(1.75rem, 7vw, 2.05rem);
+  font-size: clamp(1.45rem, 5.8vw, 1.72rem);
   font-weight: 400;
   letter-spacing: -0.01em;
   line-height: 1.2;
@@ -116,6 +117,7 @@ body {
   min-height: 56px;
   display: grid;
   place-items: center;
+  margin-top: 8px;
 }
 
 .nav-btn {
@@ -133,7 +135,6 @@ body {
 
 .nav-btn--down i {
   font-size: 22px;
-  animation: arrow-bounce 1.15s ease-in-out infinite;
 }
 
 .nav-btn--dot {
@@ -177,7 +178,8 @@ body {
 .choice-group {
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: clamp(38px, 13vw, 72px);
+  transform: translateY(8px);
 }
 
 .choice-btn {
@@ -253,17 +255,4 @@ body {
     filter: none;
   }
 
-  .nav-btn--down i {
-    animation: none;
-  }
-}
-
-@keyframes arrow-bounce {
-  0%,
-  100% {
-    transform: translateY(-2px);
-  }
-  50% {
-    transform: translateY(4px);
-  }
 }
