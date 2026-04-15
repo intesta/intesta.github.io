@@ -95,7 +95,7 @@ body {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 20px;
+  bottom: max(50px, calc(env(safe-area-inset-bottom) + 30px));
   display: grid;
   justify-items: center;
   gap: 10px;
@@ -137,7 +137,26 @@ body {
 }
 
 .nav-btn--down i {
-  font-size: 22px;
+  font-size: 40px;
+}
+
+.nav-btn--down {
+  width: auto;
+  height: auto;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
+.nav-btn--down::after {
+  content: none;
+}
+
+.nav-btn--down:hover,
+.nav-btn--down:active {
+  box-shadow: none;
+  transform: none;
 }
 
 .nav-btn--dot {
@@ -257,5 +276,4 @@ body {
     transform: none;
     filter: none;
   }
-
 }
