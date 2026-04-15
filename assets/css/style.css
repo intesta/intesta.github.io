@@ -18,6 +18,16 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: "Poppins";
+  src:
+    url("../fonts/Poppins-SemiBold.woff2") format("woff2"),
+    url("../fonts/Poppins-SemiBold.ttf") format("truetype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -86,7 +96,7 @@ body {
   top: 50%;
   left: 50%;
   font-size: clamp(2.2rem, 11vw, 4rem);
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.025em;
   text-align: center;
   line-height: 1.05;
