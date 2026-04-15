@@ -98,13 +98,21 @@ function handleChoice(choice) {
 
 function renderControls(controlType) {
   controlsEl.innerHTML = "";
+  controlsEl.classList.toggle("is-choice", controlType === "choice");
 
   if (controlType === "down") {
     const button = document.createElement("button");
     button.className = "nav-btn nav-btn--down";
     button.type = "button";
     button.setAttribute("aria-label", "Scorri alla slide successiva");
-    button.innerHTML = `<i class="feather-arrow-down-circle" aria-hidden="true"></i>`;
+    button.innerHTML = `
+      <img
+        class="icon-svg icon-svg--down"
+        src="./assets/images/chevrons-down%201.svg"
+        alt=""
+        aria-hidden="true"
+      />
+    `;
     button.addEventListener("click", () => {
       next();
     });
@@ -117,10 +125,20 @@ function renderControls(controlType) {
     choices.className = "choice-group";
     choices.innerHTML = `
       <button class="choice-btn choice-btn--no" type="button" aria-label="No, continua">
-        <i class="feather-x-circle" aria-hidden="true"></i>
+        <img
+          class="icon-svg icon-svg--choice"
+          src="./assets/images/x%201.svg"
+          alt=""
+          aria-hidden="true"
+        />
       </button>
       <button class="choice-btn choice-btn--yes" type="button" aria-label="Sì, continua">
-        <i class="feather-arrow-right-circle" aria-hidden="true"></i>
+        <img
+          class="icon-svg icon-svg--choice"
+          src="./assets/images/circle%202.svg"
+          alt=""
+          aria-hidden="true"
+        />
       </button>
     `;
 
