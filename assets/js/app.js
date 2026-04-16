@@ -57,6 +57,30 @@ app.innerHTML = `
       </article>
     </div>
   </section>
+  <section class="ai-chat" id="ai-chat" aria-label="Chat assistente AI">
+    <button class="ai-chat-launcher" id="ai-chat-launcher" type="button" aria-label="Apri chat assistente">
+      <img class="icon-svg icon-svg--down" src="./assets/images/cerchio-e-punto.svg" alt="" aria-hidden="true" />
+    </button>
+    <div class="ai-chat-panel" id="ai-chat-panel" aria-hidden="true">
+      <header class="ai-chat-header">
+        <p>AI Assistant</p>
+        <button class="ai-chat-close" id="ai-chat-close" type="button" aria-label="Chiudi chat">×</button>
+      </header>
+      <div class="ai-chat-messages" id="ai-chat-messages"></div>
+      <form class="ai-chat-form" id="ai-chat-form">
+        <input
+          class="ai-chat-input"
+          id="ai-chat-input"
+          type="text"
+          name="message"
+          placeholder="Scrivi la tua domanda..."
+          autocomplete="off"
+          required
+        />
+        <button class="ai-chat-send" id="ai-chat-send" type="submit">Invia</button>
+      </form>
+    </div>
+  </section>
 `;
 
 const slidesContainer = app.querySelector(".slides");
@@ -66,10 +90,34 @@ const controlsEl = app.querySelector("#slide-controls");
 const popupEl = app.querySelector("#profile-popup");
 const popupCloseEl = app.querySelector("#profile-popup-close");
 const popupCardEl = app.querySelector(".profile-card");
+const chatRootEl = app.querySelector("#ai-chat");
+const chatLauncherEl = app.querySelector("#ai-chat-launcher");
+const chatPanelEl = app.querySelector("#ai-chat-panel");
+const chatCloseEl = app.querySelector("#ai-chat-close");
+const chatMessagesEl = app.querySelector("#ai-chat-messages");
+const chatFormEl = app.querySelector("#ai-chat-form");
+const chatInputEl = app.querySelector("#ai-chat-input");
+const chatSendEl = app.querySelector("#ai-chat-send");
 const legalDockEl = document.querySelector(".legal-dock");
 const legalLinkEls = legalDockEl ? Array.from(legalDockEl.querySelectorAll(".legal-icon")) : [];
 
-if (!slidesContainer || !subtitleEl || !announcerEl || !controlsEl || !popupEl || !popupCloseEl || !popupCardEl) {
+if (
+  !slidesContainer ||
+  !subtitleEl ||
+  !announcerEl ||
+  !controlsEl ||
+  !popupEl ||
+  !popupCloseEl ||
+  !popupCardEl ||
+  !chatRootEl ||
+  !chatLauncherEl ||
+  !chatPanelEl ||
+  !chatCloseEl ||
+  !chatMessagesEl ||
+  !chatFormEl ||
+  !chatInputEl ||
+  !chatSendEl
+) {
   throw new Error("Slider markup not initialized.");
 }
 
@@ -100,6 +148,8 @@ let hasHelmet = false;
 let popupCloseTimer = null;
 let currentPopupMode = "profile";
 let targetsTransitionTimer = null;
+let isChatOpen = false;
+let isChatRequestPending = false;
 
 const popupContent = {
   tomas: `
@@ -142,8 +192,7 @@ const popupContent = {
 
 const legalPopupPages = {
   PR: { href: "./privacy.html", title: "Privacy Policy" },
-  CK: { href: "./cookie.html", title: "Cookie tecnici" },
-  TM: { href: "./termini.html", title: "Termini di utilizzo" }
+  CK: { href: "./cookie.html", title: "Cookie tecnici" }
 };
 
 const slideEls = slides.map((slideData) => {
@@ -153,6 +202,86 @@ const slideEls = slides.map((slideData) => {
   slidesContainer.append(section);
   return section;
 });
+
+function appendChatMessage(role, text) {
+  const msg = document.createElement("p");
+  msg.className = `ai-chat-msg ai-chat-msg--${role}`;
+  msg.textContent = text;
+  chatMessagesEl.append(msg);
+  chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+}
+
+function setChatPendingState(pending) {
+  isChatRequestPending = pending;
+  chatInputEl.disabled = pending;
+  chatSendEl.disabled = pending;
+}
+
+async function getAssistantReply(userMessage) {
+  const geminiConfig = window.INTESA_CHAT_GEMINI;
+  if (!geminiConfig || !geminiConfig.apiKey) {
+    return "Ho ricevuto la tua domanda. Configura `window.INTESA_CHAT_GEMINI` per collegare Gemini e ottenere risposte reali.";
+  }
+
+  const model = geminiConfig.model || "gemini-2.0-flash";
+  const systemPrompt = geminiConfig.systemPrompt || "Sei l'assistente AI del sito Intesta. Rispondi in italiano in modo chiaro e breve.";
+  const context = geminiConfig.context ? `\n\nContesto sito:\n${geminiConfig.context}` : "";
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(geminiConfig.apiKey)}`;
+
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            role: "user",
+            parts: [
+              {
+                text: `${systemPrompt}${context}\n\nDomanda utente: ${userMessage}`
+              }
+            ]
+          }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Gemini request failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const text = data?.candidates?.[0]?.content?.parts?.map((part) => part?.text || "").join("").trim();
+    return text || "Non ho trovato una risposta utile. Riprova con una domanda piu specifica.";
+  } catch (error) {
+    return "Non riesco a contattare Gemini in questo momento. Controlla configurazione API e rete, poi riprova.";
+  }
+}
+
+function closeChatPanel() {
+  isChatOpen = false;
+  chatRootEl.classList.remove("is-open");
+  chatPanelEl.setAttribute("aria-hidden", "true");
+}
+
+function openChatPanel() {
+  isChatOpen = true;
+  chatRootEl.classList.add("is-open");
+  chatPanelEl.setAttribute("aria-hidden", "false");
+  chatInputEl.focus();
+}
+
+function syncChatVisibility() {
+  const isLastSlide = current === TARGETS_SLIDE_INDEX;
+  const shouldShow = isLastSlide && popupEl.hidden;
+  chatRootEl.classList.toggle("is-available", shouldShow);
+
+  if (!shouldShow) {
+    closeChatPanel();
+  }
+}
 
 function openProfilePopup(type) {
   if (popupCloseTimer !== null) {
@@ -169,6 +298,7 @@ function openProfilePopup(type) {
   });
   app.classList.add("is-popup-open");
   popupCloseEl.focus();
+  syncChatVisibility();
 }
 
 function openLegalPopup(pageKey) {
@@ -197,6 +327,7 @@ function openLegalPopup(pageKey) {
   });
   app.classList.add("is-popup-open");
   popupCloseEl.focus();
+  syncChatVisibility();
 }
 
 function closeProfilePopup() {
@@ -215,6 +346,7 @@ function closeProfilePopup() {
       currentPopupMode = "profile";
     }
     popupCloseTimer = null;
+    syncChatVisibility();
   }, POPUP_ANIMATION_MS);
   app.classList.remove("is-popup-open");
 }
@@ -442,6 +574,7 @@ function paint(index) {
   announcerEl.textContent = slides[index].subtitle
     ? `${slides[index].title}, ${slides[index].subtitle}`
     : slides[index].title;
+  syncChatVisibility();
 }
 
 function animateTransition() {
@@ -596,6 +729,44 @@ popupEl.addEventListener("click", (event) => {
     closeProfilePopup();
   }
 });
+
+chatLauncherEl.addEventListener("click", () => {
+  if (isChatOpen) {
+    closeChatPanel();
+  } else {
+    openChatPanel();
+  }
+});
+
+chatCloseEl.addEventListener("click", () => {
+  closeChatPanel();
+});
+
+chatFormEl.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (isChatRequestPending) {
+    return;
+  }
+
+  const userMessage = chatInputEl.value.trim();
+  if (!userMessage) {
+    return;
+  }
+
+  appendChatMessage("user", userMessage);
+  chatInputEl.value = "";
+  setChatPendingState(true);
+
+  const reply = await getAssistantReply(userMessage);
+  appendChatMessage("assistant", reply);
+  setChatPendingState(false);
+  chatInputEl.focus();
+});
+
+appendChatMessage(
+  "assistant",
+  "Ciao! Sono l'assistente AI di Intesta. Posso aiutarti con progetto, casco, popup e contenuti del sito."
+);
 
 window.addEventListener("touchstart", onTouchStart, { passive: true });
 window.addEventListener("touchend", onTouchEnd, { passive: true });
