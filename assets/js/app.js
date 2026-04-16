@@ -6,15 +6,13 @@ const slides = [
   { title: "Hai una bici?", subtitle: "", control: "choice" },
   { title: "Utilizzi un casco?", subtitle: "", control: "choice" },
   { title: "Neanche io.", subtitle: "chi sono?", control: "dot-next" },
-  {
-    layout: "profile",
-    subtitle: "",
-    control: "none",
-    ariaTitle: "Profilo di Tomas Berardi"
-  }
+  { title: "", subtitle: "", control: "targets" }
 ];
 const HELMET_SLIDE_INDEX = 3;
 const OUTRO_SLIDE_INDEX = 4;
+const TARGETS_SLIDE_INDEX = 5;
+const POPUP_ANIMATION_MS = 320;
+const TARGETS_TRANSITION_MS = 560;
 
 const app = document.querySelector("#app");
 
@@ -31,32 +29,12 @@ app.innerHTML = `
     </footer>
     <p class="sr-only" aria-live="polite" id="slide-announcer"></p>
   </section>
-`;
-
-const slidesContainer = app.querySelector(".slides");
-const subtitleEl = app.querySelector("#slide-subtitle");
-const announcerEl = app.querySelector("#slide-announcer");
-const controlsEl = app.querySelector("#slide-controls");
-
-if (!slidesContainer || !subtitleEl || !announcerEl || !controlsEl) {
-  throw new Error("Slider markup not initialized.");
-}
-
-let current = 0;
-let touchStartX = 0;
-let touchStartY = 0;
-let isAnimating = false;
-let wheelLocked = false;
-let isChoiceAnimating = false;
-let hasHelmet = false;
-
-const slideEls = slides.map((slideData) => {
-  const section = document.createElement("section");
-  section.className = "slide";
-  if (slideData.layout === "profile") {
-    section.classList.add("slide--profile");
-    section.innerHTML = `
-      <article class="profile-card" aria-label="${slideData.ariaTitle}">
+  <section class="profile-popup" id="profile-popup" hidden aria-modal="true" role="dialog" aria-label="Profilo di Tomas Berardi">
+    <button class="profile-popup-close" id="profile-popup-close" type="button" aria-label="Chiudi popup profilo">
+      <img class="icon-svg icon-svg--choice" src="./assets/images/x.svg" alt="" aria-hidden="true" />
+    </button>
+    <div class="profile-popup-body">
+      <article class="profile-card" aria-label="Profilo di Tomas Berardi">
         <p class="profile-name">Tomas._.Berardi</p>
         <div class="profile-photo-frame" aria-hidden="true">
           <span class="photo-corner photo-corner--tl"></span>
@@ -70,20 +48,176 @@ const slideEls = slides.map((slideData) => {
           Vivo a Faenza ed ho 21 anni, Ho bisogno del tuo aiuto per il mio progetto di tesi
           che tratta il tema dell’utilizzo del casco tra noi giovani.
           Ho realizzato appositamente per voi un attività, se sei un creativo te la consiglio!
-          Puoi trovare l’invito all’interno del sito e per informazioni non esitare a contattarmi.
+          puoi trovare l’invito all’interno del sito e per informazioni non esitare a contattarmi.
         </p>
         <p class="profile-contact">
           +39 331 380 99 22<br />
           <a href="mailto:intesta2026@gmail.com">intesta2026@gmail.com</a>
         </p>
       </article>
-    `;
-  } else {
-    section.innerHTML = `<h1 class="slide-title">${slideData.title}</h1>`;
+    </div>
+  </section>
+`;
+
+const slidesContainer = app.querySelector(".slides");
+const subtitleEl = app.querySelector("#slide-subtitle");
+const announcerEl = app.querySelector("#slide-announcer");
+const controlsEl = app.querySelector("#slide-controls");
+const popupEl = app.querySelector("#profile-popup");
+const popupCloseEl = app.querySelector("#profile-popup-close");
+const popupCardEl = app.querySelector(".profile-card");
+const legalDockEl = document.querySelector(".legal-dock");
+const legalLinkEls = legalDockEl ? Array.from(legalDockEl.querySelectorAll(".legal-icon")) : [];
+
+if (!slidesContainer || !subtitleEl || !announcerEl || !controlsEl || !popupEl || !popupCloseEl || !popupCardEl) {
+  throw new Error("Slider markup not initialized.");
+}
+
+legalLinkEls.forEach((linkEl) => {
+  if (!linkEl.dataset.shortLabel) {
+    linkEl.dataset.shortLabel = linkEl.textContent?.trim() || "";
   }
+  if (!linkEl.dataset.longLabel) {
+    linkEl.dataset.longLabel = linkEl.getAttribute("title") || linkEl.dataset.shortLabel;
+  }
+  linkEl.addEventListener("click", (event) => {
+    const pageKey = linkEl.dataset.shortLabel || "";
+    if (!legalPopupPages[pageKey]) {
+      return;
+    }
+    event.preventDefault();
+    openLegalPopup(pageKey);
+  });
+});
+
+let current = 0;
+let touchStartX = 0;
+let touchStartY = 0;
+let isAnimating = false;
+let wheelLocked = false;
+let isChoiceAnimating = false;
+let hasHelmet = false;
+let popupCloseTimer = null;
+let currentPopupMode = "profile";
+let targetsTransitionTimer = null;
+
+const popupContent = {
+  tomas: `
+    <p class="profile-name">Tomas._.Berardi</p>
+    <div class="profile-photo-frame" aria-hidden="true">
+      <span class="photo-corner photo-corner--tl"></span>
+      <span class="photo-corner photo-corner--tr"></span>
+      <span class="photo-corner photo-corner--bl"></span>
+      <span class="photo-corner photo-corner--br"></span>
+      <img class="profile-photo" src="./assets/images/tomas.png" alt="Ritratto di Tomas Berardi" />
+    </div>
+    <p class="profile-bio">
+      Sono uno studente ISIA: università di Design del prodotto e della comunicazione.
+      Vivo a Faenza ed ho 21 anni, Ho bisogno del tuo aiuto per il mio progetto di tesi
+      che tratta il tema dell’utilizzo del casco tra noi giovani.
+      Ho realizzato appositamente per voi un attività, se sei un creativo te la consiglio!
+      puoi trovare l’invito all’interno del sito e per informazioni non esitare a contattarmi.
+    </p>
+    <p class="profile-contact">
+      +39 331 380 99 22<br />
+      <a href="mailto:intesta2026@gmail.com">intesta2026@gmail.com</a>
+    </p>
+  `,
+  casco: `
+    <p class="profile-name">Casco</p>
+    <div class="profile-photo-frame" aria-hidden="true">
+      <span class="photo-corner photo-corner--tl"></span>
+      <span class="photo-corner photo-corner--tr"></span>
+      <span class="photo-corner photo-corner--bl"></span>
+      <span class="photo-corner photo-corner--br"></span>
+      <img class="profile-photo profile-photo--helmet" src="./assets/images/casco.png" alt="Immagine casco" />
+    </div>
+    <p class="profile-bio">
+      Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor
+      incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
+      exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+    </p>
+  `
+};
+
+const legalPopupPages = {
+  PR: { href: "./privacy.html", title: "Privacy Policy" },
+  CK: { href: "./cookie.html", title: "Cookie tecnici" },
+  TM: { href: "./termini.html", title: "Termini di utilizzo" }
+};
+
+const slideEls = slides.map((slideData) => {
+  const section = document.createElement("section");
+  section.className = "slide";
+  section.innerHTML = `<h1 class="slide-title">${slideData.title}</h1>`;
   slidesContainer.append(section);
   return section;
 });
+
+function openProfilePopup(type) {
+  if (popupCloseTimer !== null) {
+    window.clearTimeout(popupCloseTimer);
+    popupCloseTimer = null;
+  }
+  currentPopupMode = "profile";
+  popupEl.classList.remove("is-legal-mode");
+  popupCardEl.innerHTML = popupContent[type] || popupContent.tomas;
+  popupEl.hidden = false;
+  popupEl.classList.remove("is-closing");
+  window.requestAnimationFrame(() => {
+    popupEl.classList.add("is-open");
+  });
+  app.classList.add("is-popup-open");
+  popupCloseEl.focus();
+}
+
+function openLegalPopup(pageKey) {
+  const page = legalPopupPages[pageKey];
+  if (!page) {
+    return;
+  }
+
+  if (popupCloseTimer !== null) {
+    window.clearTimeout(popupCloseTimer);
+    popupCloseTimer = null;
+  }
+
+  currentPopupMode = "legal";
+  popupEl.classList.add("is-legal-mode");
+  popupCardEl.innerHTML = `
+    <section class="legal-popup-shell" aria-label="${page.title}">
+      <p class="legal-popup-title">${page.title}</p>
+      <iframe class="legal-popup-frame" src="${page.href}" title="${page.title}" loading="lazy"></iframe>
+    </section>
+  `;
+  popupEl.hidden = false;
+  popupEl.classList.remove("is-closing");
+  window.requestAnimationFrame(() => {
+    popupEl.classList.add("is-open");
+  });
+  app.classList.add("is-popup-open");
+  popupCloseEl.focus();
+}
+
+function closeProfilePopup() {
+  if (popupEl.hidden) {
+    return;
+  }
+
+  popupEl.classList.remove("is-open");
+  popupEl.classList.add("is-closing");
+  popupCloseTimer = window.setTimeout(() => {
+    popupEl.hidden = true;
+    popupEl.classList.remove("is-closing");
+    if (currentPopupMode === "legal") {
+      popupCardEl.innerHTML = popupContent.tomas;
+      popupEl.classList.remove("is-legal-mode");
+      currentPopupMode = "profile";
+    }
+    popupCloseTimer = null;
+  }, POPUP_ANIMATION_MS);
+  app.classList.remove("is-popup-open");
+}
 
 function setChoiceAnimationState(choice, enabled) {
   const noClass = "is-selecting-no";
@@ -130,8 +264,17 @@ function handleChoice(choice) {
 }
 
 function renderControls(controlType) {
+  if (legalDockEl && legalDockEl.parentElement === controlsEl) {
+    legalDockEl.classList.remove("is-inline-footer");
+    legalLinkEls.forEach((linkEl) => {
+      linkEl.textContent = linkEl.dataset.shortLabel || linkEl.textContent || "";
+    });
+    app.insertAdjacentElement("afterend", legalDockEl);
+  }
+
   controlsEl.innerHTML = "";
   controlsEl.classList.toggle("is-choice", controlType === "choice");
+  controlsEl.classList.toggle("is-targets", controlType === "targets");
 
   if (controlType === "down") {
     const button = document.createElement("button");
@@ -209,6 +352,76 @@ function renderControls(controlType) {
       next();
     });
     controlsEl.append(button);
+    return;
+  }
+
+  if (controlType === "targets") {
+    const targets = document.createElement("div");
+    targets.className = "target-grid";
+    targets.innerHTML = `
+      <button class="target-btn target-btn--profile" type="button" aria-label="Apri popup profilo">
+        <span class="target-corner target-corner--tl"></span>
+        <span class="target-corner target-corner--tr"></span>
+        <span class="target-corner target-corner--bl"></span>
+        <span class="target-corner target-corner--br"></span>
+        <img class="target-image" src="./assets/images/tomas.png" alt="Ritratto di Tomas Berardi" />
+      </button>
+      <button class="target-btn target-btn--helmet" type="button" aria-label="Apri popup casco">
+        <span class="target-corner target-corner--tl"></span>
+        <span class="target-corner target-corner--tr"></span>
+        <span class="target-corner target-corner--bl"></span>
+        <span class="target-corner target-corner--br"></span>
+        <img class="target-image target-image--helmet" src="./assets/images/casco.png" alt="Casco" />
+      </button>
+      <div class="target-btn target-btn--empty" aria-hidden="true">
+        <span class="target-corner target-corner--tl"></span>
+        <span class="target-corner target-corner--tr"></span>
+        <span class="target-corner target-corner--bl"></span>
+        <span class="target-corner target-corner--br"></span>
+      </div>
+      <div class="target-btn target-btn--empty" aria-hidden="true">
+        <span class="target-corner target-corner--tl"></span>
+        <span class="target-corner target-corner--tr"></span>
+        <span class="target-corner target-corner--bl"></span>
+        <span class="target-corner target-corner--br"></span>
+      </div>
+      <div class="target-btn target-btn--wide target-btn--empty" aria-hidden="true">
+        <span class="target-corner target-corner--tl"></span>
+        <span class="target-corner target-corner--tr"></span>
+        <span class="target-corner target-corner--bl"></span>
+        <span class="target-corner target-corner--br"></span>
+      </div>
+    `;
+
+    const profileTarget = targets.querySelector(".target-btn--profile");
+    const helmetTarget = targets.querySelector(".target-btn--helmet");
+    if (profileTarget instanceof HTMLElement) {
+      profileTarget.addEventListener("click", () => {
+        openProfilePopup("tomas");
+      });
+    }
+    if (helmetTarget instanceof HTMLElement) {
+      helmetTarget.addEventListener("click", () => {
+        openProfilePopup("casco");
+      });
+    }
+
+    controlsEl.append(targets);
+    if (legalDockEl) {
+      const footerContact = document.createElement("div");
+      footerContact.className = "targets-contact-row";
+      footerContact.innerHTML = `
+        <a href="tel:+393313809922">+39 331 380 99 22</a>
+        <a href="mailto:intesta2026@gmail.com">intesta2026@gmail.com</a>
+      `;
+      controlsEl.append(footerContact);
+
+      legalDockEl.classList.add("is-inline-footer");
+      legalLinkEls.forEach((linkEl) => {
+        linkEl.textContent = linkEl.dataset.longLabel || linkEl.textContent || "";
+      });
+      controlsEl.append(legalDockEl);
+    }
   }
 }
 
@@ -251,12 +464,31 @@ function goTo(index) {
     return;
   }
 
+  const previous = current;
   current = safeIndex;
   animateTransition();
   paint(current);
+
+  if (targetsTransitionTimer !== null) {
+    window.clearTimeout(targetsTransitionTimer);
+    targetsTransitionTimer = null;
+  }
+  app.classList.remove("is-dot-to-targets");
+
+  if (previous === OUTRO_SLIDE_INDEX && safeIndex === TARGETS_SLIDE_INDEX) {
+    app.classList.add("is-dot-to-targets");
+    targetsTransitionTimer = window.setTimeout(() => {
+      app.classList.remove("is-dot-to-targets");
+      targetsTransitionTimer = null;
+    }, TARGETS_TRANSITION_MS);
+  }
 }
 
 function next() {
+  if (!popupEl.hidden) {
+    return;
+  }
+
   if (current < slides.length - 1) {
     goTo(current + 1);
   }
@@ -276,7 +508,7 @@ function onTouchEnd(event) {
     return;
   }
 
-  if (slides[current].layout === "profile") {
+  if (!popupEl.hidden) {
     return;
   }
 
@@ -318,6 +550,10 @@ function onTouchEnd(event) {
 }
 
 function onWheel(event) {
+  if (!popupEl.hidden) {
+    return;
+  }
+
   if (wheelLocked || slides[current].control === "choice") {
     return;
   }
@@ -332,6 +568,13 @@ function onWheel(event) {
 }
 
 document.addEventListener("keydown", (event) => {
+  if (!popupEl.hidden) {
+    if (event.key === "Escape") {
+      closeProfilePopup();
+    }
+    return;
+  }
+
   if (event.key === "ArrowRight") {
     if (slides[current].control === "choice") {
       handleChoice("yes");
@@ -342,6 +585,15 @@ document.addEventListener("keydown", (event) => {
     if (slides[current].control === "choice") {
       handleChoice("no");
     }
+  }
+});
+
+popupCloseEl.addEventListener("click", () => {
+  closeProfilePopup();
+});
+popupEl.addEventListener("click", (event) => {
+  if (event.target === popupEl) {
+    closeProfilePopup();
   }
 });
 
