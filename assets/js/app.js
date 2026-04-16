@@ -150,6 +150,17 @@ let currentPopupMode = "profile";
 let targetsTransitionTimer = null;
 let isChatOpen = false;
 let isChatRequestPending = false;
+let fetchedGeminiApiKey = "";
+let typingIndicatorEl = null;
+
+const CHAT_SITE_CONTEXT = `
+Sito: Intesta (presentazione mobile-first in italiano).
+Autore/progetto: Tomas Berardi, studente ISIA (Design del prodotto e della comunicazione), progetto tesi sul tema dell'utilizzo del casco tra i giovani.
+Obiettivo del sito: coinvolgere utenti giovani, presentare il progetto, invitare a interagire con i contenuti e a contattare il progetto.
+Tono del sito: diretto, semplice, umano, contemporaneo, frasi brevi, senza tecnicismi inutili.
+Contenuti principali: percorso a slide, sezioni profilo/casco, contatti, pagine legali (privacy e cookie).
+Vincoli: niente divagazioni su temi non collegati al progetto/sito; niente invenzioni di dati, prezzi, policy o funzionalita non presenti.
+`;
 
 const popupContent = {
   tomas: `
@@ -209,6 +220,69 @@ function appendChatMessage(role, text) {
   msg.textContent = text;
   chatMessagesEl.append(msg);
   chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+  return msg;
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
+function showTypingIndicator() {
+  if (typingIndicatorEl) {
+    return;
+  }
+  const msg = document.createElement("p");
+  msg.className = "ai-chat-msg ai-chat-msg--assistant ai-chat-msg--typing";
+  msg.setAttribute("aria-label", "Assistente sta scrivendo");
+  msg.innerHTML = `
+    <span class="ai-dot"></span>
+    <span class="ai-dot"></span>
+    <span class="ai-dot"></span>
+  `;
+  chatMessagesEl.append(msg);
+  chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+  typingIndicatorEl = msg;
+}
+
+function hideTypingIndicator() {
+  if (!typingIndicatorEl) {
+    return;
+  }
+  typingIndicatorEl.remove();
+  typingIndicatorEl = null;
+}
+
+async function appendAssistantMessageTypewriter(text) {
+  let msg = typingIndicatorEl;
+  if (msg) {
+    typingIndicatorEl = null;
+  } else {
+    msg = document.createElement("p");
+    msg.className = "ai-chat-msg ai-chat-msg--assistant ai-chat-msg--typewriter ai-chat-msg--from-dots";
+    msg.textContent = "";
+    chatMessagesEl.append(msg);
+  }
+
+  msg.className = "ai-chat-msg ai-chat-msg--assistant ai-chat-msg--typewriter ai-chat-msg--from-dots";
+  msg.textContent = "";
+  window.requestAnimationFrame(() => {
+    msg.classList.add("is-expanding");
+  });
+  await sleep(130);
+
+  const fullText = text || "";
+  for (let i = 0; i < fullText.length; i += 1) {
+    msg.textContent += fullText[i];
+    chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+    await sleep(16);
+  }
+
+  msg.classList.remove("ai-chat-msg--typewriter");
+  msg.classList.remove("ai-chat-msg--from-dots");
+  msg.classList.remove("is-expanding");
+  return msg;
 }
 
 function setChatPendingState(pending) {
@@ -218,46 +292,124 @@ function setChatPendingState(pending) {
 }
 
 async function getAssistantReply(userMessage) {
-  const geminiConfig = window.INTESA_CHAT_GEMINI;
-  if (!geminiConfig || !geminiConfig.apiKey) {
-    return "Ho ricevuto la tua domanda. Configura `window.INTESA_CHAT_GEMINI` per collegare Gemini e ottenere risposte reali.";
+  const geminiConfig = window.INTESA_CHAT_GEMINI || {};
+  const localApiKey = geminiConfig && geminiConfig.apiKey ? String(geminiConfig.apiKey) : "";
+  const apiKey = localApiKey || (await fetchGeminiApiKeyFromServer());
+  if (!apiKey) {
+    return "Ho ricevuto la tua domanda. API key non disponibile: configura il server endpoint /intesta_api/gemini-key.";
   }
 
-  const model = geminiConfig.model || "gemini-2.0-flash";
-  const systemPrompt = geminiConfig.systemPrompt || "Sei l'assistente AI del sito Intesta. Rispondi in italiano in modo chiaro e breve.";
-  const context = geminiConfig.context ? `\n\nContesto sito:\n${geminiConfig.context}` : "";
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(geminiConfig.apiKey)}`;
+  const modelCandidates = Array.isArray(geminiConfig.models) && geminiConfig.models.length > 0
+    ? geminiConfig.models
+    : [geminiConfig.model || "gemini-2.0-flash-lite", "gemma-3-27b-it"];
+  const systemPrompt = geminiConfig.systemPrompt || `
+Sei l'assistente ufficiale del sito Intesta.
+Prima di rispondere, usa sempre e solo il contesto del sito fornito.
+Rispondi in italiano, in modo chiaro, breve e utile, con tono coerente al sito.
+Non divagare: se la domanda e fuori tema, riporta gentilmente la conversazione su Intesta, progetto casco, contenuti del sito, contatti o aspetti legali del sito.
+Non inventare informazioni mancanti. Se un dato non e disponibile, dichiaralo in modo trasparente.
+Mantieni risposte compatte (massimo 3-4 frasi), concrete e orientate all'utente.
+`;
+  const mergedContext = geminiConfig.context
+    ? `${CHAT_SITE_CONTEXT}\n${geminiConfig.context}`
+    : CHAT_SITE_CONTEXT;
+  const context = `\n\nContesto sito:\n${mergedContext}`;
+  const promptText = `${systemPrompt}${context}\n\nDomanda utente: ${userMessage}`;
 
-  try {
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: "user",
-            parts: [
-              {
-                text: `${systemPrompt}${context}\n\nDomanda utente: ${userMessage}`
-              }
-            ]
-          }
-        ]
-      })
-    });
+  let hadQuotaError = false;
+  let hadTemporaryError = false;
 
-    if (!response.ok) {
-      throw new Error(`Gemini request failed: ${response.status}`);
+  for (const model of modelCandidates) {
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: "user",
+              parts: [
+                {
+                  text: promptText
+                }
+              ]
+            }
+          ]
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        const lowered = errorText.toLowerCase();
+        if (response.status === 429 || lowered.includes("quota") || lowered.includes("rate limit")) {
+          hadQuotaError = true;
+          continue;
+        }
+        if (response.status >= 500) {
+          hadTemporaryError = true;
+          continue;
+        }
+        continue;
+      }
+
+      const data = await response.json();
+      const text = data?.candidates?.[0]?.content?.parts?.map((part) => part?.text || "").join("").trim();
+      if (text) {
+        return text;
+      }
+    } catch (error) {
+      hadTemporaryError = true;
+      continue;
     }
-
-    const data = await response.json();
-    const text = data?.candidates?.[0]?.content?.parts?.map((part) => part?.text || "").join("").trim();
-    return text || "Non ho trovato una risposta utile. Riprova con una domanda piu specifica.";
-  } catch (error) {
-    return "Non riesco a contattare Gemini in questo momento. Controlla configurazione API e rete, poi riprova.";
   }
+
+  if (hadQuotaError) {
+    return "In questo momento la quota AI giornaliera e terminata. Riprova tra poco.";
+  }
+  if (hadTemporaryError) {
+    return "Il servizio AI e temporaneamente non disponibile. Riprova tra poco.";
+  }
+  return "Non ho trovato una risposta utile. Riprova con una domanda piu specifica.";
+}
+
+async function fetchGeminiApiKeyFromServer() {
+  if (fetchedGeminiApiKey) {
+    return fetchedGeminiApiKey;
+  }
+
+  const geminiConfig = window.INTESA_CHAT_GEMINI || {};
+  const endpointCandidates = [
+    geminiConfig.apiKeyEndpoint || "",
+    "https://foxly.it/intesta_api/gemini-key",
+    "https://foxly.it/intesta_api/public/gemini-key",
+    "./intesta_api/gemini-key"
+  ].filter(Boolean);
+
+  for (const endpoint of endpointCandidates) {
+    try {
+      const response = await fetch(endpoint, {
+        method: "GET",
+        headers: {
+          "Accept": "application/json"
+        }
+      });
+      if (!response.ok) {
+        continue;
+      }
+      const data = await response.json();
+      if (data && data.result === 1 && typeof data.apiKey === "string" && data.apiKey.length > 0) {
+        fetchedGeminiApiKey = data.apiKey;
+        return fetchedGeminiApiKey;
+      }
+    } catch (error) {
+      continue;
+    }
+  }
+
+  return "";
 }
 
 function closeChatPanel() {
@@ -756,11 +908,16 @@ chatFormEl.addEventListener("submit", async (event) => {
   appendChatMessage("user", userMessage);
   chatInputEl.value = "";
   setChatPendingState(true);
+  showTypingIndicator();
 
-  const reply = await getAssistantReply(userMessage);
-  appendChatMessage("assistant", reply);
-  setChatPendingState(false);
-  chatInputEl.focus();
+  try {
+    const reply = await getAssistantReply(userMessage);
+    await appendAssistantMessageTypewriter(reply);
+  } finally {
+    hideTypingIndicator();
+    setChatPendingState(false);
+    chatInputEl.focus();
+  }
 });
 
 appendChatMessage(
