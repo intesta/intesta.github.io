@@ -168,9 +168,17 @@ body {
   transform: none;
   display: block;
   overflow-y: auto;
+  overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   pointer-events: auto;
   padding: var(--targets-vpad) 0;
+}
+
+@media (min-width: 900px) {
+  .controls.is-targets {
+    left: 0;
+    right: 0;
+  }
 }
 
 .nav-btn {
