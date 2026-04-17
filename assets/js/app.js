@@ -8,7 +8,12 @@ if (window.location.hash === "#/admin") {
     throw new Error("Missing #app container.");
   }
 
-  const ADMIN_API_BASE = "./intesta_api/admin";
+  const ADMIN_API_BASES = [
+    "https://foxly.it/intesta_api/admin",
+    "https://foxly.it/intesta_api/public/admin",
+    "./intesta_api/admin",
+    "./intesta_api/public/admin"
+  ];
   const adminState = {
     authenticated: false,
     loading: true,
@@ -48,6 +53,12 @@ if (window.location.hash === "#/admin") {
     });
   }
 
+  function getAdminApiBases() {
+    const config = window.INTESA_ADMIN || {};
+    const customBase = config.baseUrl ? String(config.baseUrl) : "";
+    return [customBase, ...ADMIN_API_BASES].filter((value, index, arr) => value && arr.indexOf(value) === index);
+  }
+
   async function adminRequest(path, options = {}) {
     const requestOptions = {
       method: options.method || "GET",
@@ -58,14 +69,39 @@ if (window.location.hash === "#/admin") {
       },
       ...(options.body ? { body: JSON.stringify(options.body) } : {})
     };
-    const response = await fetch(`${ADMIN_API_BASE}${path}`, requestOptions);
-    let payload = null;
-    try {
-      payload = await response.json();
-    } catch (_error) {
-      payload = null;
+
+    const endpointBases = getAdminApiBases();
+    let lastResponse = null;
+    let lastPayload = null;
+
+    for (const base of endpointBases) {
+      try {
+        const response = await fetch(`${base}${path}`, requestOptions);
+        let payload = null;
+        try {
+          payload = await response.json();
+        } catch (_error) {
+          payload = null;
+        }
+
+        lastResponse = response;
+        lastPayload = payload;
+
+        if (response.ok && payload && payload.result === 1) {
+          return { response, payload };
+        }
+        if (response.status !== 404) {
+          return { response, payload };
+        }
+      } catch (_error) {
+        if (String(base).includes("://")) {
+          continue;
+        }
+        break;
+      }
     }
-    return { response, payload };
+
+    return { response: lastResponse, payload: lastPayload };
   }
 
   async function refreshPendingCount() {
