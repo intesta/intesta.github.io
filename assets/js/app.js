@@ -186,7 +186,7 @@ if (window.location.hash === "#/admin") {
           <form class="admin-image-upload-form" id="admin-image-upload-form">
             <label class="admin-label" for="admin-image-file">Sostituisci foto</label>
             <input id="admin-image-file" class="admin-input" type="file" accept=".jpg,.jpeg,.png,.gif,.webp" />
-            <button class="admin-btn admin-btn--ghost" type="submit">Carica nuova foto</button>
+            <button class="admin-btn admin-btn--ghost admin-upload-submit" id="admin-image-upload-submit" type="submit" disabled>Seleziona un file</button>
           </form>
           <div class="admin-decision-actions">
             <button class="admin-btn admin-btn--success" type="button" data-admin-set-status="approved">Approva</button>
@@ -259,11 +259,27 @@ if (window.location.hash === "#/admin") {
     adminRoot.innerHTML = `
       <section class="admin-shell">
         <header class="admin-header">
-          <h1 class="admin-title">Moderazione invii</h1>
-          <p class="admin-pending">Dispositivi da approvare: <strong>${adminState.pendingCount}</strong></p>
-          <div class="admin-actions">
-            <button class="admin-btn admin-btn--ghost" id="admin-refresh-list" type="button">Aggiorna elenco</button>
-            <button class="admin-btn admin-btn--ghost" id="admin-logout" type="button">Logout</button>
+          <div class="admin-actions admin-actions--icon">
+            <button class="admin-icon-btn" id="admin-refresh-list" type="button" aria-label="Aggiorna elenco" title="Aggiorna elenco">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <polyline points="23 4 23 10 17 10"></polyline>
+                <polyline points="1 20 1 14 7 14"></polyline>
+                <path d="M3.51 9a9 9 0 0 1 14.13-3.36L23 10"></path>
+                <path d="M20.49 15a9 9 0 0 1-14.13 3.36L1 14"></path>
+              </svg>
+            </button>
+            <button class="admin-icon-btn" id="admin-logout" type="button" aria-label="Logout" title="Logout">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+              </svg>
+            </button>
+          </div>
+          <div class="admin-header-center">
+            <h1 class="admin-title">Moderazione invii</h1>
+            <p class="admin-pending">Da approvare</p>
+            <p class="admin-count-pill">${adminState.pendingCount}</p>
           </div>
         </header>
         <main class="admin-main">
@@ -281,6 +297,8 @@ if (window.location.hash === "#/admin") {
     const closeModalButtons = Array.from(document.querySelectorAll("[data-admin-close-modal]"));
     const statusButtons = Array.from(document.querySelectorAll("[data-admin-set-status]"));
     const imageUploadForm = document.querySelector("#admin-image-upload-form");
+    const imageUploadSubmit = document.querySelector("#admin-image-upload-submit");
+    const imageUploadInput = document.querySelector("#admin-image-file");
 
     openButtons.forEach((button) => {
       if (!(button instanceof HTMLButtonElement)) {
@@ -355,6 +373,25 @@ if (window.location.hash === "#/admin") {
     });
 
     if (imageUploadForm instanceof HTMLFormElement) {
+      const syncUploadButtonState = () => {
+        if (!(imageUploadSubmit instanceof HTMLButtonElement) || !(imageUploadInput instanceof HTMLInputElement)) {
+          return;
+        }
+        const hasFile = Boolean(imageUploadInput.files && imageUploadInput.files[0]);
+        imageUploadSubmit.disabled = !hasFile || adminState.requestPending;
+        imageUploadSubmit.classList.toggle("is-ready", hasFile && !adminState.requestPending);
+        imageUploadSubmit.textContent = adminState.requestPending
+          ? "Caricamento..."
+          : hasFile
+            ? "Carica nuova foto"
+            : "Seleziona un file";
+      };
+
+      if (imageUploadInput instanceof HTMLInputElement) {
+        imageUploadInput.addEventListener("change", syncUploadButtonState);
+      }
+      syncUploadButtonState();
+
       imageUploadForm.addEventListener("submit", async (event) => {
         event.preventDefault();
         if (adminState.selectedDeviceId === null || adminState.requestPending) {
@@ -369,6 +406,7 @@ if (window.location.hash === "#/admin") {
         formData.append("deviceId", String(adminState.selectedDeviceId));
         formData.append("image", imageFile, imageFile.name);
         adminState.requestPending = true;
+        syncUploadButtonState();
         try {
           await adminRequest("/device-image", {
             method: "POST",
@@ -377,6 +415,7 @@ if (window.location.hash === "#/admin") {
           await loadAdminData();
         } finally {
           adminState.requestPending = false;
+          syncUploadButtonState();
           renderAdmin();
         }
       });

@@ -1233,24 +1233,67 @@ body.admin-mode .legal-dock {
 }
 
 .admin-header {
+  position: relative;
   display: grid;
-  gap: 8px;
+  gap: 12px;
   background: rgba(255, 255, 255, 0.92);
   border: 1px solid rgba(18, 25, 35, 0.12);
   border-radius: 14px;
-  box-shadow: 0 8px 20px rgba(16, 22, 30, 0.1);
-  padding: 12px;
+  box-shadow: 0 8px 20px rgba(16, 22, 30, 0.08);
+  padding: 14px 12px 12px;
+}
+
+.admin-header-center {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
 }
 
 .admin-pending {
-  font-size: 0.92rem;
-  color: #2d3540;
+  font-size: 0.84rem;
+  color: #5a6473;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
 }
 
 .admin-actions {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  display: flex;
+  justify-content: flex-end;
   gap: 8px;
+}
+
+.admin-actions--icon {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+.admin-icon-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  border: 1px solid rgba(20, 28, 38, 0.14);
+  background: #f6f8fb;
+  color: #1f2731;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: transform 150ms var(--motion-ease), background-color 150ms var(--motion-ease);
+}
+
+.admin-icon-btn:hover {
+  transform: translateY(-1px);
+  background: #eef2f7;
+}
+
+.admin-icon-btn svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2.1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .admin-btn {
@@ -1287,6 +1330,18 @@ body.admin-mode .legal-dock {
 .admin-btn--success {
   background: #2d9b4c;
   color: #fff;
+}
+
+.admin-count-pill {
+  min-width: 64px;
+  border-radius: 999px;
+  background: #111821;
+  color: #fff;
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 6px 16px;
+  line-height: 1;
 }
 
 .admin-main {
@@ -1513,14 +1568,23 @@ body.admin-mode .legal-dock {
   gap: 8px;
 }
 
+.admin-upload-submit {
+  opacity: 0.65;
+}
+
+.admin-upload-submit.is-ready {
+  opacity: 1;
+  background: #11151b;
+  color: #fff;
+}
+
 @media (min-width: 720px) {
   .admin-shell {
     padding: 28px 20px 36px;
   }
 
-  .admin-actions {
-    grid-template-columns: repeat(3, max-content);
-    justify-content: flex-start;
+  .admin-title {
+    font-size: 1.45rem;
   }
 }
 
