@@ -584,10 +584,12 @@ function runChoiceAnimation(choice, onDone) {
 
   window.setTimeout(() => {
     button.classList.remove("is-picked");
-    setChoiceAnimationState(choice, false);
     clearChoiceDotSweep();
     isChoiceAnimating = false;
     onDone();
+    window.setTimeout(() => {
+      setChoiceAnimationState(choice, false);
+    }, 120);
   }, CHOICE_ANIMATION_MS);
 }
 

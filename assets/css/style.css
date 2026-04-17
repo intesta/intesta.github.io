@@ -57,7 +57,7 @@ body {
 }
 
 #app.is-choice-sweep::before {
-  opacity: 0.95;
+  opacity: 0.48;
 }
 
 .slider {
@@ -437,7 +437,7 @@ body {
 
 #app.is-selecting-no .slide.is-active .slide-title,
 #app.is-selecting-yes .slide.is-active .slide-title {
-  animation: choice-title-pulse 240ms ease-out 1;
+  transform: translate(-50%, -30%) scale(1.14);
 }
 
 .choice-btn.is-picked {
@@ -1019,18 +1019,6 @@ body {
   }
   100% {
     transform: scale(1);
-  }
-}
-
-@keyframes choice-title-pulse {
-  0% {
-    transform: translate(-50%, -30%) scale(0.95);
-  }
-  60% {
-    transform: translate(-50%, -30%) scale(1.14);
-  }
-  100% {
-    transform: translate(-50%, -30%) scale(1);
   }
 }
 
