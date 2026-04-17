@@ -278,8 +278,10 @@ if (window.location.hash === "#/admin") {
           </div>
           <div class="admin-header-center">
             <h1 class="admin-title">Moderazione invii</h1>
-            <p class="admin-pending">Da approvare</p>
-            <p class="admin-count-pill">${adminState.pendingCount}</p>
+            <p class="admin-pending">
+              Da approvare
+              <span class="admin-count-dot">${adminState.pendingCount}</span>
+            </p>
           </div>
         </header>
         <main class="admin-main">

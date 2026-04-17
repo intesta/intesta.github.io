@@ -1235,25 +1235,28 @@ body.admin-mode .legal-dock {
 .admin-header {
   position: relative;
   display: grid;
-  gap: 12px;
+  gap: 8px;
   background: rgba(255, 255, 255, 0.92);
   border: 1px solid rgba(18, 25, 35, 0.12);
   border-radius: 14px;
   box-shadow: 0 8px 20px rgba(16, 22, 30, 0.08);
-  padding: 14px 12px 12px;
+  padding: 10px 12px 8px;
 }
 
 .admin-header-center {
   display: grid;
   justify-items: center;
-  gap: 4px;
+  gap: 3px;
 }
 
 .admin-pending {
-  font-size: 0.84rem;
+  font-size: 0.8rem;
   color: #5a6473;
   letter-spacing: 0.03em;
   text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
 }
 
 .admin-actions {
@@ -1264,13 +1267,13 @@ body.admin-mode .legal-dock {
 
 .admin-actions--icon {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: 6px;
+  right: 8px;
 }
 
 .admin-icon-btn {
-  width: 38px;
-  height: 38px;
+  width: 34px;
+  height: 34px;
   border-radius: 999px;
   border: 1px solid rgba(20, 28, 38, 0.14);
   background: #f6f8fb;
@@ -1287,8 +1290,8 @@ body.admin-mode .legal-dock {
 }
 
 .admin-icon-btn svg {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   stroke: currentColor;
   fill: none;
   stroke-width: 2.1;
@@ -1332,16 +1335,20 @@ body.admin-mode .legal-dock {
   color: #fff;
 }
 
-.admin-count-pill {
-  min-width: 64px;
+.admin-count-dot {
+  min-width: 22px;
+  height: 22px;
   border-radius: 999px;
   background: #111821;
   color: #fff;
   text-align: center;
-  font-size: 1.1rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  padding: 6px 16px;
+  padding: 0 6px;
   line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .admin-main {
