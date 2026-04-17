@@ -17,6 +17,7 @@
   --site-side: max(0px, calc((100vw - var(--site-max-width)) / 2));
   --dot-grid-size: 30px;
   --dot-radius: 1.7px;
+  --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 body {
@@ -53,7 +54,7 @@ body {
   );
   background-size: var(--dot-grid-size) var(--dot-grid-size);
   filter: blur(var(--choice-sweep-blur, 0px));
-  transition: opacity 120ms ease-out;
+  transition: opacity 120ms var(--motion-ease);
 }
 
 #app.is-choice-sweep::before {
@@ -94,9 +95,9 @@ body {
   transform: translateY(20px) scale(0.985);
   filter: blur(7px);
   transition:
-    opacity 620ms cubic-bezier(0.22, 1, 0.36, 1),
-    transform 740ms cubic-bezier(0.22, 1, 0.36, 1),
-    filter 480ms ease,
+    opacity 620ms var(--motion-ease),
+    transform 740ms var(--motion-ease),
+    filter 480ms var(--motion-ease),
     visibility 0ms linear 740ms;
 }
 
@@ -106,9 +107,9 @@ body {
   transform: translateY(0) scale(1);
   filter: blur(0);
   transition:
-    opacity 620ms cubic-bezier(0.22, 1, 0.36, 1),
-    transform 740ms cubic-bezier(0.22, 1, 0.36, 1),
-    filter 430ms ease,
+    opacity 620ms var(--motion-ease),
+    transform 740ms var(--motion-ease),
+    filter 430ms var(--motion-ease),
     visibility 0ms;
 }
 
@@ -122,8 +123,8 @@ body {
   text-align: center;
   line-height: 1.05;
   color: #0a0d11;
-  transform: translate(-50%, -30%);
-  transition: transform 220ms ease, opacity 220ms ease;
+  transform: translate(-50%, -30%) translateX(var(--title-shift, 0));
+  transition: transform 220ms var(--motion-ease), opacity 220ms var(--motion-ease);
   width: 90%;
 }
 
@@ -148,7 +149,7 @@ body {
   letter-spacing: -0.01em;
   line-height: 1.2;
   color: #2b3035;
-  transition: transform 350ms ease, opacity 350ms ease;
+  transition: transform 350ms var(--motion-ease), opacity 350ms var(--motion-ease);
 }
 
 .slide-subtitle.is-hidden {
@@ -257,7 +258,7 @@ body {
   inset: -7px;
   border-radius: inherit;
   border: 1px solid transparent;
-  transition: border-color 220ms ease;
+  transition: border-color 220ms var(--motion-ease);
 }
 
 .nav-btn:hover,
@@ -282,7 +283,7 @@ body {
   display: grid;
   place-items: center;
   cursor: pointer;
-  transition: transform 220ms ease, filter 220ms ease;
+  transition: transform 220ms var(--motion-ease), filter 220ms var(--motion-ease);
   position: absolute;
   bottom: 0;
   pointer-events: auto;
@@ -361,12 +362,12 @@ body {
 
 .target-btn--profile {
   cursor: pointer;
-  transition: transform 170ms ease, filter 170ms ease;
+  transition: transform 170ms var(--motion-ease), filter 170ms var(--motion-ease);
 }
 
 .target-btn--helmet {
   cursor: pointer;
-  transition: transform 170ms ease, filter 170ms ease;
+  transition: transform 170ms var(--motion-ease), filter 170ms var(--motion-ease);
 }
 
 .target-btn--profile:hover,
@@ -437,7 +438,15 @@ body {
 
 #app.is-selecting-no .slide.is-active .slide-title,
 #app.is-selecting-yes .slide.is-active .slide-title {
-  transform: translate(-50%, -30%) scale(1.14);
+  transform: translate(-50%, -30%) translateX(var(--title-shift, 0));
+}
+
+#app.is-selecting-no .slide.is-active .slide-title {
+  --title-shift: -10px;
+}
+
+#app.is-selecting-yes .slide.is-active .slide-title {
+  --title-shift: 10px;
 }
 
 .choice-btn.is-picked {
@@ -446,7 +455,7 @@ body {
 }
 
 .choice-btn.is-picked .icon-svg {
-  animation: choice-pulse 240ms ease-out 1;
+  animation: choice-pulse 240ms var(--motion-ease) 1;
 }
 
 #app.is-transitioning .slide-subtitle {
@@ -460,15 +469,15 @@ body {
 }
 
 #app.is-dot-to-targets .controls.is-targets .target-grid {
-  animation: targets-reveal 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: targets-reveal 560ms var(--motion-ease) both;
 }
 
 #app.is-dot-to-targets .controls.is-targets .targets-contact-row {
-  animation: targets-reveal-soft 560ms cubic-bezier(0.22, 1, 0.36, 1) 60ms both;
+  animation: targets-reveal-soft 560ms var(--motion-ease) 60ms both;
 }
 
 #app.is-dot-to-targets .controls.is-targets .legal-dock.is-inline-footer {
-  animation: targets-reveal-soft 560ms cubic-bezier(0.22, 1, 0.36, 1) 100ms both;
+  animation: targets-reveal-soft 560ms var(--motion-ease) 100ms both;
 }
 
 .sr-only {
@@ -507,7 +516,7 @@ body {
   letter-spacing: 0.05em;
   display: grid;
   place-items: center;
-  transition: transform 170ms ease, border-color 170ms ease, background-color 170ms ease;
+  transition: transform 170ms var(--motion-ease), border-color 170ms var(--motion-ease), background-color 170ms var(--motion-ease);
 }
 
 .legal-icon:hover {
@@ -581,7 +590,7 @@ body {
   z-index: 80;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 220ms ease;
+  transition: opacity 220ms var(--motion-ease);
 }
 
 .ai-chat.is-available {
@@ -602,7 +611,7 @@ body {
   place-items: center;
   padding: 0;
   cursor: pointer;
-  transition: transform 180ms ease, box-shadow 180ms ease;
+  transition: transform 180ms var(--motion-ease), box-shadow 180ms var(--motion-ease);
 }
 
 .ai-chat-launcher:hover {
@@ -629,7 +638,7 @@ body {
   opacity: 0;
   transform: translateY(14px) scale(0.98);
   pointer-events: none;
-  transition: opacity 240ms ease, transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: opacity 240ms var(--motion-ease), transform 280ms var(--motion-ease);
 }
 
 .ai-chat.is-open .ai-chat-panel {
@@ -694,7 +703,7 @@ body {
   border-radius: 999px;
   background: #6a727d;
   opacity: 0.35;
-  animation: ai-dot-bounce 900ms ease-in-out infinite;
+  animation: ai-dot-bounce 900ms var(--motion-ease) infinite;
 }
 
 .ai-dot:nth-child(2) {
@@ -720,7 +729,7 @@ body {
   width: 42px;
   min-height: 34px;
   overflow: hidden;
-  transition: width 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: width 220ms var(--motion-ease);
 }
 
 .ai-chat-msg--from-dots.is-expanding {
@@ -781,7 +790,7 @@ body {
   background-size: var(--dot-grid-size) var(--dot-grid-size);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 320ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: opacity 320ms var(--motion-ease);
 }
 
 .profile-popup[hidden] {
@@ -800,7 +809,7 @@ body {
   display: grid;
   justify-items: center;
   transform: translateY(12px) scale(0.99);
-  transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 320ms var(--motion-ease);
 }
 
 .profile-popup.is-open .profile-popup-body {

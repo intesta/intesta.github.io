@@ -549,6 +549,7 @@ function startChoiceDotSweep(choice) {
   clearChoiceDotSweep();
   const sweepColor = choice === "yes" ? "#39b86a" : "#e14a4a";
   const startAt = performance.now();
+  const easeOutMotion = (t) => 1 - (1 - t) ** 3;
 
   app.classList.add("is-choice-sweep");
   app.style.setProperty("--choice-sweep-color", sweepColor);
@@ -556,7 +557,8 @@ function startChoiceDotSweep(choice) {
 
   const animate = (now) => {
     const rawProgress = Math.min((now - startAt) / CHOICE_ANIMATION_MS, 1);
-    const blurFactor = Math.sin(rawProgress * Math.PI);
+    const halfProgress = rawProgress <= 0.5 ? rawProgress * 2 : (1 - rawProgress) * 2;
+    const blurFactor = easeOutMotion(halfProgress);
 
     app.style.setProperty("--choice-sweep-blur", `${(blurFactor * CHOICE_SWEEP_BLUR_PX).toFixed(2)}px`);
     if (rawProgress < 1) {
@@ -584,12 +586,10 @@ function runChoiceAnimation(choice, onDone) {
 
   window.setTimeout(() => {
     button.classList.remove("is-picked");
+    setChoiceAnimationState(choice, false);
     clearChoiceDotSweep();
     isChoiceAnimating = false;
     onDone();
-    window.setTimeout(() => {
-      setChoiceAnimationState(choice, false);
-    }, 120);
   }, CHOICE_ANIMATION_MS);
 }
 
