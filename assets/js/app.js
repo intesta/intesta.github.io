@@ -638,6 +638,11 @@ const DEVICE_SUBMISSION_STATUS_ENDPOINTS = [
   "https://foxly.it/intesta_api/public/devices/submission-status",
   "./intesta_api/devices/submission-status"
 ];
+const DEVICE_DELETE_SUBMISSION_ENDPOINTS = [
+  "https://foxly.it/intesta_api/devices/delete-submission",
+  "https://foxly.it/intesta_api/public/devices/delete-submission",
+  "./intesta_api/devices/delete-submission"
+];
 
 const slideEls = slides.map((slideData) => {
   const section = document.createElement("section");
@@ -688,6 +693,12 @@ function getDeviceSubmissionStatusEndpoints() {
   const uploadConfig = window.INTESA_UPLOAD || {};
   const customEndpoint = uploadConfig.deviceStatusEndpoint ? String(uploadConfig.deviceStatusEndpoint) : "";
   return [customEndpoint, ...DEVICE_SUBMISSION_STATUS_ENDPOINTS].filter((value, index, arr) => value && arr.indexOf(value) === index);
+}
+
+function getDeviceDeleteSubmissionEndpoints() {
+  const uploadConfig = window.INTESA_UPLOAD || {};
+  const customEndpoint = uploadConfig.deviceDeleteEndpoint ? String(uploadConfig.deviceDeleteEndpoint) : "";
+  return [customEndpoint, ...DEVICE_DELETE_SUBMISSION_ENDPOINTS].filter((value, index, arr) => value && arr.indexOf(value) === index);
 }
 
 function getStoredDeviceCode() {
@@ -814,6 +825,49 @@ async function fetchDeviceSubmissionStatus(deviceCode) {
     }
   }
   return null;
+}
+
+async function deleteDeviceSubmission(deviceCode, type) {
+  if (!deviceCode || (type !== "text" && type !== "image")) {
+    throw new Error("Parametri eliminazione non validi.");
+  }
+  const endpoints = getDeviceDeleteSubmissionEndpoints();
+  let lastError = new Error("Endpoint eliminazione non disponibile.");
+  for (const endpoint of endpoints) {
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          deviceCode,
+          type
+        })
+      });
+      let payload = null;
+      try {
+        payload = await response.json();
+      } catch (_error) {
+        payload = null;
+      }
+
+      if (response.ok && payload && payload.result === 1) {
+        return payload;
+      }
+      lastError = new Error(payload && payload.msg ? payload.msg : `Eliminazione non riuscita (HTTP ${response.status}).`);
+      if (response.status !== 404) {
+        throw lastError;
+      }
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error("Errore di rete.");
+      if (String(endpoint).includes("://")) {
+        continue;
+      }
+      throw lastError;
+    }
+  }
+  throw lastError;
 }
 
 function validateHelmetUploadFile(file) {
@@ -1380,6 +1434,9 @@ function renderControls(controlType) {
             placeholder="descrivi il casco che desideri"
             aria-label="Descrizione casco"
           ></textarea>
+          <button class="helmet-remove-btn helmet-remove-btn--text is-hidden" id="helmet-remove-text" type="button" aria-label="Elimina descrizione precedente">
+            Elimina
+          </button>
           <button class="helmet-send-btn helmet-send-btn--text" id="helmet-send-text" type="button" aria-label="Invia descrizione">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <path d="M3 20L21 12L3 4L3 10L15 12L3 14L3 20Z"></path>
@@ -1403,6 +1460,9 @@ function renderControls(controlType) {
           <p class="helmet-upload-copy">carica foto del casco che desideri</p>
           <p class="helmet-upload-meta">1 file • max ${formatBytes(HELMET_UPLOAD_MAX_BYTES)} • JPG/PNG/GIF/WEBP</p>
           <img class="helmet-upload-preview is-hidden" id="helmet-image-preview" alt="Anteprima immagine casco caricata" />
+          <button class="helmet-remove-btn helmet-remove-btn--image is-hidden" id="helmet-remove-image" type="button" aria-label="Elimina foto precedente">
+            Elimina
+          </button>
           <button class="helmet-send-btn helmet-send-btn--image" id="helmet-send-image" type="button" aria-label="Invia foto">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <path d="M3 20L21 12L3 4L3 10L15 12L3 14L3 20Z"></path>
@@ -1430,15 +1490,19 @@ function renderControls(controlType) {
     const imagePreviewEl = targets.querySelector("#helmet-image-preview");
     const sendTextEl = targets.querySelector("#helmet-send-text");
     const sendImageEl = targets.querySelector("#helmet-send-image");
+    const removeTextEl = targets.querySelector("#helmet-remove-text");
+    const removeImageEl = targets.querySelector("#helmet-remove-image");
     const descriptionBoxEl = targets.querySelector(".target-btn--description");
     const uploadBoxEl = targets.querySelector(".target-btn--upload");
     let previewUrl = "";
 
     const applyLockedState = (contributionBundle) => {
       if (contributionBundle && typeof contributionBundle === "object") {
+        const hasText = Object.prototype.hasOwnProperty.call(contributionBundle, "text");
+        const hasImage = Object.prototype.hasOwnProperty.call(contributionBundle, "image");
         lockedContribution = {
-          text: contributionBundle.text || (lockedContribution ? lockedContribution.text : null),
-          image: contributionBundle.image || (lockedContribution ? lockedContribution.image : null)
+          text: hasText ? contributionBundle.text : (lockedContribution ? lockedContribution.text : null),
+          image: hasImage ? contributionBundle.image : (lockedContribution ? lockedContribution.image : null)
         };
       }
       const hasTextLock = Boolean(lockedContribution && lockedContribution.text);
@@ -1453,11 +1517,17 @@ function renderControls(controlType) {
         sendTextEl.disabled = hasTextLock;
         sendTextEl.classList.toggle("is-hidden", hasTextLock);
       }
+      if (removeTextEl instanceof HTMLButtonElement) {
+        removeTextEl.disabled = !hasTextLock;
+        removeTextEl.classList.toggle("is-hidden", !hasTextLock);
+      }
       if (descriptionBoxEl instanceof HTMLElement) {
         descriptionBoxEl.classList.toggle("is-text-locked", hasTextLock);
       }
       if (hasTextLock && descriptionEl instanceof HTMLTextAreaElement) {
         descriptionEl.value = lockedContribution.text.description || "";
+      } else if (!hasTextLock && descriptionEl instanceof HTMLTextAreaElement) {
+        descriptionEl.value = "";
       }
 
       if (fileInputEl instanceof HTMLInputElement) {
@@ -1467,6 +1537,10 @@ function renderControls(controlType) {
         sendImageEl.disabled = hasImageLock;
         sendImageEl.classList.toggle("is-hidden", hasImageLock);
       }
+      if (removeImageEl instanceof HTMLButtonElement) {
+        removeImageEl.disabled = !hasImageLock;
+        removeImageEl.classList.toggle("is-hidden", !hasImageLock);
+      }
       if (uploadBoxEl instanceof HTMLElement) {
         uploadBoxEl.classList.toggle("is-image-locked", hasImageLock);
       }
@@ -1475,6 +1549,12 @@ function renderControls(controlType) {
         if (imageUrl) {
           imagePreviewEl.src = imageUrl;
           imagePreviewEl.classList.remove("is-hidden");
+        }
+      } else if (!hasImageLock && imagePreviewEl instanceof HTMLImageElement) {
+        imagePreviewEl.src = "";
+        imagePreviewEl.classList.add("is-hidden");
+        if (fileInputEl instanceof HTMLInputElement) {
+          fileInputEl.value = "";
         }
       }
     };
@@ -1556,6 +1636,34 @@ function renderControls(controlType) {
       });
     }
 
+    if (removeTextEl instanceof HTMLButtonElement) {
+      removeTextEl.addEventListener("click", async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!(lockedContribution && lockedContribution.text)) {
+          return;
+        }
+        removeTextEl.disabled = true;
+        try {
+          const deviceCode = persistedDeviceCode || (await ensureDeviceCode());
+          if (!deviceCode) {
+            showUploadToast("Impossibile identificare il dispositivo.", "error");
+            return;
+          }
+          await deleteDeviceSubmission(deviceCode, "text");
+          applyLockedState({
+            text: null
+          });
+          showUploadToast("Descrizione precedente eliminata.", "success");
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Eliminazione non riuscita.";
+          showUploadToast(message, "error");
+        } finally {
+          removeTextEl.disabled = false;
+        }
+      });
+    }
+
     if (
       sendImageEl instanceof HTMLButtonElement &&
       fileInputEl instanceof HTMLInputElement &&
@@ -1608,6 +1716,34 @@ function renderControls(controlType) {
             sendImageEl.disabled = false;
             fileInputEl.disabled = false;
           }
+        }
+      });
+    }
+
+    if (removeImageEl instanceof HTMLButtonElement) {
+      removeImageEl.addEventListener("click", async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!(lockedContribution && lockedContribution.image)) {
+          return;
+        }
+        removeImageEl.disabled = true;
+        try {
+          const deviceCode = persistedDeviceCode || (await ensureDeviceCode());
+          if (!deviceCode) {
+            showUploadToast("Impossibile identificare il dispositivo.", "error");
+            return;
+          }
+          await deleteDeviceSubmission(deviceCode, "image");
+          applyLockedState({
+            image: null
+          });
+          showUploadToast("Foto precedente eliminata.", "success");
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Eliminazione non riuscita.";
+          showUploadToast(message, "error");
+        } finally {
+          removeImageEl.disabled = false;
         }
       });
     }

@@ -509,6 +509,36 @@ body {
   display: none;
 }
 
+.helmet-remove-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  border: none;
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: rgba(18, 24, 33, 0.88);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  z-index: 3;
+}
+
+.helmet-remove-btn:hover {
+  opacity: 0.92;
+}
+
+.helmet-remove-btn:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.helmet-remove-btn.is-hidden {
+  display: none;
+}
+
 .target-btn--upload.is-image-locked .helmet-upload-file {
   pointer-events: none;
 }
