@@ -48,20 +48,16 @@ body {
   opacity: 0;
   background-image: radial-gradient(
     circle,
-    var(--choice-sweep-color, #39b86a) var(--choice-sweep-dot-radius, var(--dot-radius)),
-    transparent var(--choice-sweep-dot-radius, var(--dot-radius))
+    var(--choice-sweep-color, #39b86a) var(--dot-radius),
+    transparent var(--dot-radius)
   );
   background-size: var(--dot-grid-size) var(--dot-grid-size);
-  clip-path: inset(0 calc(100% - var(--choice-sweep-progress, 0%)) 0 0);
+  filter: blur(var(--choice-sweep-blur, 0px));
   transition: opacity 120ms ease-out;
 }
 
 #app.is-choice-sweep::before {
   opacity: 0.95;
-}
-
-#app.is-choice-sweep-left::before {
-  clip-path: inset(0 0 0 calc(100% - var(--choice-sweep-progress, 0%)));
 }
 
 .slider {

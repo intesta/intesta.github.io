@@ -14,7 +14,7 @@ const TARGETS_SLIDE_INDEX = 5;
 const POPUP_ANIMATION_MS = 320;
 const TARGETS_TRANSITION_MS = 560;
 const CHOICE_ANIMATION_MS = 340;
-const CHOICE_SWEEP_DOT_GROWTH_PX = 0.24;
+const CHOICE_SWEEP_BLUR_PX = 1.8;
 
 const app = document.querySelector("#app");
 
@@ -540,37 +540,30 @@ function clearChoiceDotSweep() {
     window.cancelAnimationFrame(choiceSweepRafId);
     choiceSweepRafId = null;
   }
-  app.classList.remove("is-choice-sweep", "is-choice-sweep-right", "is-choice-sweep-left");
-  app.style.removeProperty("--choice-sweep-progress");
+  app.classList.remove("is-choice-sweep");
   app.style.removeProperty("--choice-sweep-color");
-  app.style.removeProperty("--choice-sweep-dot-radius");
+  app.style.removeProperty("--choice-sweep-blur");
 }
 
 function startChoiceDotSweep(choice) {
   clearChoiceDotSweep();
-  const directionClass = choice === "yes" ? "is-choice-sweep-right" : "is-choice-sweep-left";
   const sweepColor = choice === "yes" ? "#39b86a" : "#e14a4a";
   const startAt = performance.now();
-  const dotRadiusValue = window.getComputedStyle(document.documentElement).getPropertyValue("--dot-radius");
-  const baseDotRadius = Number.parseFloat(dotRadiusValue) || 1.7;
 
-  app.classList.add("is-choice-sweep", directionClass);
+  app.classList.add("is-choice-sweep");
   app.style.setProperty("--choice-sweep-color", sweepColor);
-  app.style.setProperty("--choice-sweep-progress", "0%");
-  app.style.setProperty("--choice-sweep-dot-radius", `${baseDotRadius.toFixed(3)}px`);
+  app.style.setProperty("--choice-sweep-blur", "0px");
 
   const animate = (now) => {
     const rawProgress = Math.min((now - startAt) / CHOICE_ANIMATION_MS, 1);
-    const easedProgress = 1 - (1 - rawProgress) ** 3;
-    const dotGrow = Math.sin(rawProgress * Math.PI) * CHOICE_SWEEP_DOT_GROWTH_PX;
+    const blurFactor = Math.sin(rawProgress * Math.PI);
 
-    app.style.setProperty("--choice-sweep-progress", `${(easedProgress * 100).toFixed(2)}%`);
-    app.style.setProperty("--choice-sweep-dot-radius", `${(baseDotRadius + dotGrow).toFixed(3)}px`);
+    app.style.setProperty("--choice-sweep-blur", `${(blurFactor * CHOICE_SWEEP_BLUR_PX).toFixed(2)}px`);
     if (rawProgress < 1) {
       choiceSweepRafId = window.requestAnimationFrame(animate);
       return;
     }
-    app.style.setProperty("--choice-sweep-dot-radius", `${baseDotRadius.toFixed(3)}px`);
+    app.style.setProperty("--choice-sweep-blur", "0px");
     choiceSweepRafId = null;
   };
   choiceSweepRafId = window.requestAnimationFrame(animate);
