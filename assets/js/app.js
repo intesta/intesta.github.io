@@ -1,5 +1,404 @@
 "use strict";
 
+if (window.location.hash === "#/admin") {
+  document.body.classList.add("admin-mode");
+
+  const adminRoot = document.querySelector("#app");
+  if (!adminRoot) {
+    throw new Error("Missing #app container.");
+  }
+
+  const ADMIN_API_BASE = "./intesta_api/admin";
+  const adminState = {
+    authenticated: false,
+    loading: true,
+    view: "review",
+    pendingCount: 0,
+    currentReview: null,
+    submissions: [],
+    submissionsLoaded: false,
+    requestPending: false,
+    error: ""
+  };
+
+  function escapeHtml(value) {
+    const text = value == null ? "" : String(value);
+    return text
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
+  }
+
+  function formatDateTime(value) {
+    if (!value) {
+      return "-";
+    }
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+    return date.toLocaleString("it-IT", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+  }
+
+  async function adminRequest(path, options = {}) {
+    const requestOptions = {
+      method: options.method || "GET",
+      credentials: "include",
+      headers: {
+        "Accept": "application/json",
+        ...(options.body ? { "Content-Type": "application/json" } : {})
+      },
+      ...(options.body ? { body: JSON.stringify(options.body) } : {})
+    };
+    const response = await fetch(`${ADMIN_API_BASE}${path}`, requestOptions);
+    let payload = null;
+    try {
+      payload = await response.json();
+    } catch (_error) {
+      payload = null;
+    }
+    return { response, payload };
+  }
+
+  async function refreshPendingCount() {
+    const { response, payload } = await adminRequest("/pending-count");
+    if (response.ok && payload?.result === 1) {
+      adminState.pendingCount = Number(payload.pendingDeviceCount || 0);
+      return;
+    }
+    if (response.status === 401) {
+      adminState.authenticated = false;
+    }
+  }
+
+  async function refreshCurrentReview() {
+    const { response, payload } = await adminRequest("/review/next");
+    if (response.ok && payload?.result === 1) {
+      adminState.currentReview = payload.item || null;
+      return;
+    }
+    if (response.status === 401) {
+      adminState.authenticated = false;
+    }
+  }
+
+  async function refreshSubmissionsList() {
+    const { response, payload } = await adminRequest("/submissions");
+    if (response.ok && payload?.result === 1) {
+      adminState.submissions = Array.isArray(payload.items) ? payload.items : [];
+      adminState.submissionsLoaded = true;
+      return;
+    }
+    if (response.status === 401) {
+      adminState.authenticated = false;
+    }
+  }
+
+  async function loadAdminData() {
+    await refreshPendingCount();
+    await refreshCurrentReview();
+    if (adminState.view === "list") {
+      await refreshSubmissionsList();
+    }
+  }
+
+  function reviewItemsMarkup() {
+    if (!adminState.currentReview || !Array.isArray(adminState.currentReview.items)) {
+      return `<p class="admin-empty">Nessun dispositivo in attesa di approvazione.</p>`;
+    }
+    return adminState.currentReview.items.map((item) => {
+      const description = item.description ? `<p class="admin-item-text">${escapeHtml(item.description)}</p>` : "";
+      const image = item.imageUrl ? `<img class="admin-item-image" src="${escapeHtml(item.imageUrl)}" alt="Foto inviata dispositivo" loading="lazy" />` : "";
+      return `
+        <article class="admin-item-block">
+          <p class="admin-item-type">${item.type === "image" ? "Foto" : "Descrizione"} • ${escapeHtml(item.status || "")}</p>
+          ${description}
+          ${image}
+          <p class="admin-item-date">${escapeHtml(formatDateTime(item.createdAt))}</p>
+        </article>
+      `;
+    }).join("");
+  }
+
+  function listMarkup() {
+    if (!adminState.submissionsLoaded) {
+      return `<p class="admin-empty">Tocca "Aggiorna elenco" per caricare tutti gli invii.</p>`;
+    }
+    if (adminState.submissions.length === 0) {
+      return `<p class="admin-empty">Nessun invio trovato.</p>`;
+    }
+    return adminState.submissions.map((item) => {
+      const statusClass = `admin-status admin-status--${escapeHtml(item.status || "pending")}`;
+      const description = item.description ? `<p class="admin-list-text">${escapeHtml(item.description)}</p>` : "";
+      const image = item.imageUrl ? `<img class="admin-list-image" src="${escapeHtml(item.imageUrl)}" alt="Foto inviata" loading="lazy" />` : "";
+      return `
+        <article class="admin-list-card">
+          <div class="admin-list-head">
+            <p class="admin-list-device">Dispositivo ${escapeHtml(item.deviceCode || "")}</p>
+            <span class="${statusClass}">${escapeHtml(item.status || "-")}</span>
+          </div>
+          <p class="admin-list-meta">${item.type === "image" ? "Foto" : "Descrizione"} • ${escapeHtml(formatDateTime(item.createdAt))}</p>
+          ${description}
+          ${image}
+        </article>
+      `;
+    }).join("");
+  }
+
+  function renderAdmin() {
+    if (adminState.loading) {
+      adminRoot.innerHTML = `<section class="admin-shell"><p class="admin-loading">Caricamento area admin...</p></section>`;
+      return;
+    }
+
+    if (!adminState.authenticated) {
+      adminRoot.innerHTML = `
+        <section class="admin-shell">
+          <article class="admin-login-card">
+            <h1 class="admin-title">Area Admin</h1>
+            <p class="admin-subtitle">Accesso protetto da password.</p>
+            <form id="admin-login-form" class="admin-login-form">
+              <label class="admin-label" for="admin-password">Password</label>
+              <input id="admin-password" class="admin-input" type="password" name="password" autocomplete="current-password" required />
+              <button class="admin-btn admin-btn--primary" type="submit">Accedi</button>
+            </form>
+            ${adminState.error ? `<p class="admin-error">${escapeHtml(adminState.error)}</p>` : ""}
+          </article>
+        </section>
+      `;
+      const loginForm = document.querySelector("#admin-login-form");
+      if (loginForm instanceof HTMLFormElement) {
+        loginForm.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          if (adminState.requestPending) {
+            return;
+          }
+          const passwordInput = loginForm.querySelector("#admin-password");
+          const password = passwordInput instanceof HTMLInputElement ? passwordInput.value : "";
+          adminState.requestPending = true;
+          adminState.error = "";
+          try {
+            const { response, payload } = await adminRequest("/login", {
+              method: "POST",
+              body: { password }
+            });
+            if (!response.ok || payload?.result !== 1) {
+              adminState.error = payload?.msg || "Accesso non riuscito.";
+              renderAdmin();
+              return;
+            }
+            adminState.authenticated = true;
+            adminState.loading = true;
+            renderAdmin();
+            await loadAdminData();
+            adminState.loading = false;
+            renderAdmin();
+          } catch (_error) {
+            adminState.error = "Errore di rete.";
+            renderAdmin();
+          } finally {
+            adminState.requestPending = false;
+          }
+        });
+      }
+      return;
+    }
+
+    adminRoot.innerHTML = `
+      <section class="admin-shell">
+        <header class="admin-header">
+          <h1 class="admin-title">Moderazione invii</h1>
+          <p class="admin-pending">Dispositivi da approvare: <strong>${adminState.pendingCount}</strong></p>
+          <div class="admin-actions">
+            <button class="admin-btn ${adminState.view === "review" ? "admin-btn--primary" : "admin-btn--ghost"}" id="admin-view-review" type="button">Approva</button>
+            <button class="admin-btn ${adminState.view === "list" ? "admin-btn--primary" : "admin-btn--ghost"}" id="admin-view-list" type="button">Tutti gli invii</button>
+            <button class="admin-btn admin-btn--ghost" id="admin-logout" type="button">Logout</button>
+          </div>
+        </header>
+        <main class="admin-main">
+          ${adminState.view === "review"
+            ? `
+              <section class="admin-review-view">
+                <p class="admin-hint">Swipe a sinistra per rifiutare, a destra per approvare.</p>
+                <article class="admin-review-card" id="admin-review-card">
+                  <p class="admin-review-device">Dispositivo: ${escapeHtml(adminState.currentReview?.deviceCode || "-")}</p>
+                  ${reviewItemsMarkup()}
+                </article>
+                <div class="admin-decision-actions">
+                  <button class="admin-btn admin-btn--danger" id="admin-reject" type="button" ${adminState.currentReview ? "" : "disabled"}>Rifiuta</button>
+                  <button class="admin-btn admin-btn--success" id="admin-approve" type="button" ${adminState.currentReview ? "" : "disabled"}>Approva</button>
+                </div>
+              </section>
+            `
+            : `
+              <section class="admin-list-view">
+                <button class="admin-btn admin-btn--ghost" id="admin-refresh-list" type="button">Aggiorna elenco</button>
+                <div class="admin-list-wrap">${listMarkup()}</div>
+              </section>
+            `}
+        </main>
+      </section>
+    `;
+
+    const reviewButton = document.querySelector("#admin-view-review");
+    const listButton = document.querySelector("#admin-view-list");
+    const logoutButton = document.querySelector("#admin-logout");
+    const approveButton = document.querySelector("#admin-approve");
+    const rejectButton = document.querySelector("#admin-reject");
+    const refreshListButton = document.querySelector("#admin-refresh-list");
+
+    if (reviewButton instanceof HTMLButtonElement) {
+      reviewButton.addEventListener("click", async () => {
+        adminState.view = "review";
+        adminState.loading = true;
+        renderAdmin();
+        await refreshPendingCount();
+        await refreshCurrentReview();
+        adminState.loading = false;
+        renderAdmin();
+      });
+    }
+    if (listButton instanceof HTMLButtonElement) {
+      listButton.addEventListener("click", async () => {
+        adminState.view = "list";
+        adminState.loading = true;
+        renderAdmin();
+        await refreshPendingCount();
+        await refreshSubmissionsList();
+        adminState.loading = false;
+        renderAdmin();
+      });
+    }
+    if (logoutButton instanceof HTMLButtonElement) {
+      logoutButton.addEventListener("click", async () => {
+        await adminRequest("/logout", { method: "POST" });
+        adminState.authenticated = false;
+        adminState.submissionsLoaded = false;
+        adminState.currentReview = null;
+        adminState.error = "";
+        renderAdmin();
+      });
+    }
+
+    async function submitDecision(action) {
+      if (!adminState.currentReview || adminState.requestPending) {
+        return;
+      }
+      adminState.requestPending = true;
+      try {
+        await adminRequest("/review/decision", {
+          method: "POST",
+          body: {
+            deviceId: adminState.currentReview.deviceId,
+            action
+          }
+        });
+        await refreshPendingCount();
+        await refreshCurrentReview();
+        if (adminState.view === "list" && adminState.submissionsLoaded) {
+          await refreshSubmissionsList();
+        }
+      } finally {
+        adminState.requestPending = false;
+        renderAdmin();
+      }
+    }
+
+    if (approveButton instanceof HTMLButtonElement) {
+      approveButton.addEventListener("click", () => {
+        void submitDecision("approve");
+      });
+    }
+    if (rejectButton instanceof HTMLButtonElement) {
+      rejectButton.addEventListener("click", () => {
+        void submitDecision("reject");
+      });
+    }
+    if (refreshListButton instanceof HTMLButtonElement) {
+      refreshListButton.addEventListener("click", async () => {
+        adminState.loading = true;
+        renderAdmin();
+        await refreshSubmissionsList();
+        adminState.loading = false;
+        renderAdmin();
+      });
+    }
+
+    const reviewCard = document.querySelector("#admin-review-card");
+    if (reviewCard instanceof HTMLElement && adminState.currentReview) {
+      let startX = 0;
+      let active = false;
+      let currentDelta = 0;
+
+      const onPointerDown = (event) => {
+        active = true;
+        startX = event.clientX;
+        currentDelta = 0;
+        reviewCard.setPointerCapture(event.pointerId);
+      };
+      const onPointerMove = (event) => {
+        if (!active) {
+          return;
+        }
+        currentDelta = event.clientX - startX;
+        reviewCard.style.transform = `translateX(${currentDelta}px) rotate(${(currentDelta / 18).toFixed(2)}deg)`;
+      };
+      const onPointerUp = async (event) => {
+        if (!active) {
+          return;
+        }
+        active = false;
+        reviewCard.releasePointerCapture(event.pointerId);
+        const threshold = 110;
+        if (currentDelta > threshold) {
+          reviewCard.style.transform = "translateX(120vw) rotate(14deg)";
+          await submitDecision("approve");
+          return;
+        }
+        if (currentDelta < -threshold) {
+          reviewCard.style.transform = "translateX(-120vw) rotate(-14deg)";
+          await submitDecision("reject");
+          return;
+        }
+        reviewCard.style.transform = "";
+      };
+
+      reviewCard.addEventListener("pointerdown", onPointerDown);
+      reviewCard.addEventListener("pointermove", onPointerMove);
+      reviewCard.addEventListener("pointerup", (event) => {
+        void onPointerUp(event);
+      });
+      reviewCard.addEventListener("pointercancel", () => {
+        active = false;
+        reviewCard.style.transform = "";
+      });
+    }
+  }
+
+  void (async () => {
+    try {
+      const { response, payload } = await adminRequest("/session");
+      adminState.authenticated = Boolean(response.ok && payload?.result === 1 && payload?.authenticated === 1);
+      if (adminState.authenticated) {
+        await loadAdminData();
+      }
+    } catch (_error) {
+      adminState.authenticated = false;
+    } finally {
+      adminState.loading = false;
+      renderAdmin();
+    }
+  })();
+} else {
+
 const slides = [
   { title: "CIAO!", subtitle: "Ho una missione per te", control: "down" },
   { title: "Sei uno studente?", subtitle: "", control: "choice" },
@@ -1476,3 +1875,4 @@ window.addEventListener("touchend", onTouchEnd, { passive: true });
 window.addEventListener("wheel", onWheel, { passive: true });
 
 paint(current);
+}
