@@ -1,11 +1,3 @@
-@font-face {
-  font-family: "Inter";
-  src: url("../fonts/Inter-Variable-latin.woff2") format("woff2");
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-}
-
 * {
   box-sizing: border-box;
   margin: 0;
@@ -23,7 +15,7 @@
 body {
   min-height: 100vh;
   min-height: 100svh;
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  font-family: "Space Mono", "Courier New", Courier, monospace;
   background-color: #f8f8f8;
   background-image: radial-gradient(circle, #dadada var(--dot-radius), transparent var(--dot-radius));
   background-size: var(--dot-grid-size) var(--dot-grid-size);
@@ -117,8 +109,8 @@ body {
   position: fixed;
   top: 30%;
   left: 50%;
-  font-size: clamp(2rem, 9.5vw, 3.45rem);
-  font-weight: 600;
+  font-size: 32px;
+  font-weight: 400;
   letter-spacing: -0.025em;
   text-align: center;
   line-height: 1.05;
@@ -186,6 +178,7 @@ body {
 .controls.is-targets {
   --targets-gap: 40px;
   --targets-vpad: 40px;
+  --target-square: calc((100svh - (var(--targets-vpad) * 2) - var(--targets-gap)) / 2);
   left: var(--site-side);
   right: var(--site-side);
   top: 0;
@@ -196,7 +189,9 @@ body {
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   pointer-events: auto;
-  padding: var(--targets-vpad) 0;
+  padding: 0;
+  padding-bottom: 130px;
+  scroll-snap-type: y proximity;
 }
 
 @media (min-width: 900px) {
@@ -340,9 +335,68 @@ body {
   pointer-events: auto;
 }
 
+.targets-layout {
+  width: 100%;
+  display: block;
+}
+
+.targets-screen {
+  width: 100%;
+  min-height: 100svh;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: var(--targets-gap);
+  padding: var(--targets-vpad) 0;
+}
+
+.targets-screen--intro {
+  align-content: start;
+  grid-template-rows: auto 1fr;
+  gap: 18px;
+  padding: var(--targets-vpad) 0;
+}
+
+.targets-screen--pair {
+  align-content: center;
+}
+
+.targets-screen--pair .helmet-upload-form {
+  margin-top: 0;
+}
+
+.targets-screen--pair .helmet-upload-form,
+.targets-screen--pair .target-btn--profile,
+.targets-screen--pair .target-btn--helmet {
+  width: min(100%, var(--target-square));
+}
+
+.targets-screen--pair .target-btn--profile,
+.targets-screen--pair .target-btn--helmet {
+  aspect-ratio: 1 / 1;
+}
+
+.targets-screen--intro .target-btn--intro {
+  width: min(100%, var(--target-square));
+  max-width: 100%;
+  aspect-ratio: auto;
+  height: 100%;
+  min-height: 0;
+  align-self: stretch;
+}
+
+.targets-logo {
+  width: min(52vw, 190px);
+  height: auto;
+  display: block;
+  object-fit: contain;
+}
+
 .target-btn {
   position: relative;
-  width: calc((100svh - (var(--targets-vpad) * 2) - var(--targets-gap)) / 2);
+  width: min(100%, var(--target-square));
   max-width: 100%;
   margin: 0 auto;
   flex: 0 0 auto;
@@ -353,6 +407,60 @@ body {
   place-items: center;
   padding: 14px;
   overflow: hidden;
+}
+
+.target-btn--intro {
+  width: min(100%, var(--target-square));
+  max-width: 100%;
+  min-height: 0;
+  aspect-ratio: auto;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 14px;
+  padding: 22px 18px;
+}
+
+.targets-claim {
+  text-align: center;
+  font-size: 20px;
+  line-height: 24px;
+  letter-spacing: -0.02em;
+  color: #11151b;
+  font-weight: 400;
+}
+
+.targets-jump-btn {
+  position: fixed;
+  left: 50%;
+  bottom: 72px;
+  transform: translateX(-50%);
+  z-index: 82;
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  transition: opacity 180ms var(--motion-ease), transform 180ms var(--motion-ease);
+}
+
+.targets-jump-btn .icon-svg--down {
+  width: 52px;
+  height: 52px;
+}
+
+.targets-jump-btn.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) scale(0.92);
+}
+
+.targets-lower {
+  width: 100%;
+  display: grid;
+  justify-items: center;
+  gap: var(--targets-gap);
+  margin-top: 0;
 }
 
 .target-btn--wide {
@@ -387,11 +495,12 @@ body {
 }
 
 .helmet-upload-form {
-  width: calc((100svh - (var(--targets-vpad) * 2) - var(--targets-gap)) / 2);
+  width: min(100%, var(--target-square));
   max-width: 100%;
   margin: 0 auto;
   display: grid;
   gap: var(--targets-gap);
+  margin-top: 0;
 }
 
 .target-btn--input {
@@ -402,26 +511,32 @@ body {
 .target-btn--description {
   cursor: text;
   align-items: center;
+  padding: 10px;
 }
 
 .helmet-upload-textarea {
   width: 100%;
-  height: 100%;
-  padding: 10px 58px 12px 58px;
+  height: auto;
+  min-height: 4.8em;
+  max-height: calc(100% - 18px);
+  align-self: center;
+  padding: 10px 46px;
   border: none;
   background: transparent;
   resize: none;
   outline: none;
   text-align: center;
   font: inherit;
-  font-size: clamp(1rem, 4.2vw, 1.2rem);
-  line-height: 1.2;
+  font-size: clamp(1rem, 3.8vw, 1.1rem);
+  line-height: 1.32;
   letter-spacing: -0.02em;
   color: #0f1318;
 }
 
 .helmet-upload-textarea::placeholder {
-  color: rgba(15, 19, 24, 0.45);
+  font-size: 16px;
+  font-weight: 700;
+  color: rgba(0, 0, 0, 0.51);
 }
 
 .target-btn--upload {
@@ -429,6 +544,28 @@ body {
   cursor: pointer;
   text-align: center;
   gap: 6px;
+}
+
+.target-btn--download {
+  position: relative;
+  text-decoration: none;
+  color: #0f1318;
+  text-align: center;
+  gap: 10px;
+  background: transparent;
+}
+
+.helmet-download-bg {
+  position: absolute;
+  inset: 6px;
+  width: calc(100% - 12px);
+  height: calc(100% - 12px);
+  object-fit: contain;
+  object-position: center;
+  pointer-events: none;
+  z-index: 0;
+  filter: none;
+  transform: scale(1.12);
 }
 
 .helmet-upload-file {
@@ -444,10 +581,29 @@ body {
 }
 
 .helmet-upload-copy {
-  font-size: clamp(1rem, 4vw, 1.12rem);
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 400;
   letter-spacing: -0.01em;
   line-height: 1.2;
+}
+
+.helmet-download-icon {
+  width: 44px;
+  height: 44px;
+  display: block;
+  transform: rotate(180deg);
+  position: relative;
+  z-index: 1;
+}
+
+.helmet-download-copy {
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  color: rgba(0, 0, 0, 0.9);
+  position: relative;
+  z-index: 1;
 }
 
 .helmet-upload-meta {
@@ -472,28 +628,25 @@ body {
 
 .helmet-send-btn {
   position: absolute;
-  right: 12px;
-  bottom: 12px;
-  width: 42px;
-  height: 42px;
+  right: 20px;
+  bottom: 20px;
+  width: 44px;
+  height: 44px;
   border: none;
-  border-radius: 999px;
-  background: #11151b;
-  color: #fff;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
   display: grid;
   place-items: center;
   cursor: pointer;
-  box-shadow:
-    0 7px 16px rgba(12, 16, 24, 0.22),
-    0 2px 4px rgba(12, 16, 24, 0.16);
+  box-shadow: none;
   transition: transform 150ms var(--motion-ease), opacity 150ms var(--motion-ease);
 }
 
-.helmet-send-btn svg {
-  width: 21px;
-  height: 21px;
-  fill: currentColor;
-  transform: translateX(1px);
+.helmet-send-icon {
+  width: 44px;
+  height: 44px;
+  display: block;
 }
 
 .helmet-send-btn:hover {
@@ -769,8 +922,9 @@ body {
 
 .ai-chat {
   position: fixed;
-  right: calc(var(--site-side) + 14px);
-  bottom: 14px;
+  left: 50%;
+  bottom: 72px;
+  transform: translateX(-50%);
   z-index: 80;
   opacity: 0;
   pointer-events: none;
@@ -783,32 +937,36 @@ body {
 }
 
 .ai-chat-launcher {
-  width: 56px;
-  height: 56px;
-  border: 1px solid rgba(15, 20, 29, 0.08);
-  border-radius: 999px;
-  background: #ffffff;
-  box-shadow:
-    0 8px 20px rgba(12, 16, 24, 0.16),
-    0 2px 6px rgba(12, 16, 24, 0.1);
+  width: 76px;
+  height: 76px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
   display: grid;
   place-items: center;
   padding: 0;
   cursor: pointer;
-  transition: transform 180ms var(--motion-ease), box-shadow 180ms var(--motion-ease);
+  transition: transform 180ms var(--motion-ease), opacity 180ms var(--motion-ease);
 }
 
 .ai-chat-launcher:hover {
-  transform: translateY(-1px);
-  box-shadow:
-    0 10px 24px rgba(12, 16, 24, 0.2),
-    0 3px 8px rgba(12, 16, 24, 0.12);
+  transform: translateY(-1px) scale(1.02);
+}
+
+.ai-chat-launcher-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
 }
 
 .ai-chat-panel {
   position: absolute;
-  right: 0;
-  bottom: 64px;
+  left: 50%;
+  right: auto;
+  bottom: 70px;
+  transform: translateX(-50%) translateY(14px) scale(0.98);
   width: min(90vw, 360px);
   min-height: 300px;
   max-height: min(66svh, 560px);
@@ -820,14 +978,13 @@ body {
   display: grid;
   grid-template-rows: auto 1fr auto;
   opacity: 0;
-  transform: translateY(14px) scale(0.98);
   pointer-events: none;
   transition: opacity 240ms var(--motion-ease), transform 280ms var(--motion-ease);
 }
 
 .ai-chat.is-open .ai-chat-panel {
   opacity: 1;
-  transform: translateY(0) scale(1);
+  transform: translateX(-50%) translateY(0) scale(1);
   pointer-events: auto;
 }
 

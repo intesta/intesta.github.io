@@ -445,14 +445,10 @@ const slides = [
   { title: "Sei uno studente?", subtitle: "", control: "choice" },
   { title: "Hai una bici?", subtitle: "", control: "choice" },
   { title: "Utilizzi un casco?", subtitle: "", control: "choice" },
-  { title: "Neanche io.", subtitle: "chi sono?", control: "dot-next" },
   { title: "", subtitle: "", control: "targets" }
 ];
-const HELMET_SLIDE_INDEX = 3;
-const OUTRO_SLIDE_INDEX = 4;
-const TARGETS_SLIDE_INDEX = 5;
+const TARGETS_SLIDE_INDEX = 4;
 const POPUP_ANIMATION_MS = 320;
-const TARGETS_TRANSITION_MS = 560;
 const CHOICE_ANIMATION_MS = 340;
 const CHOICE_SWEEP_BLUR_PX = 1.8;
 
@@ -501,7 +497,7 @@ app.innerHTML = `
   </section>
   <section class="ai-chat" id="ai-chat" aria-label="Chat assistente AI">
     <button class="ai-chat-launcher" id="ai-chat-launcher" type="button" aria-label="Apri chat assistente">
-      <img class="icon-svg icon-svg--down" src="./assets/images/cerchio-e-punto.svg" alt="" aria-hidden="true" />
+      <img class="ai-chat-launcher-image" src="./assets/images/AI.png" alt="" aria-hidden="true" />
     </button>
     <div class="ai-chat-panel" id="ai-chat-panel" aria-hidden="true">
       <header class="ai-chat-header">
@@ -587,10 +583,9 @@ let isAnimating = false;
 let wheelLocked = false;
 let isChoiceAnimating = false;
 let choiceSweepRafId = null;
-let hasHelmet = false;
 let popupCloseTimer = null;
 let currentPopupMode = "profile";
-let targetsTransitionTimer = null;
+let hasTargetsScrolledDown = false;
 let isChatOpen = false;
 let isChatRequestPending = false;
 let fetchedGeminiApiKey = "";
@@ -1185,8 +1180,14 @@ function openChatPanel() {
 
 function syncChatVisibility() {
   const isLastSlide = current === TARGETS_SLIDE_INDEX;
-  const shouldShow = isLastSlide && popupEl.hidden;
+  const shouldShow = isLastSlide && popupEl.hidden && hasTargetsScrolledDown;
   chatRootEl.classList.toggle("is-available", shouldShow);
+
+  const jumpButton = controlsEl.querySelector("#targets-jump-btn");
+  if (jumpButton instanceof HTMLButtonElement) {
+    const showJump = isLastSlide && popupEl.hidden && !hasTargetsScrolledDown;
+    jumpButton.classList.toggle("is-hidden", !showJump);
+  }
 
   if (!shouldShow) {
     closeChatPanel();
@@ -1334,10 +1335,6 @@ function handleChoice(choice) {
     return;
   }
 
-  if (current === HELMET_SLIDE_INDEX) {
-    hasHelmet = choice === "yes";
-  }
-
   runChoiceAnimation(choice, () => {
     next();
   });
@@ -1353,6 +1350,7 @@ function renderControls(controlType) {
   }
 
   controlsEl.innerHTML = "";
+  controlsEl.onscroll = null;
   controlsEl.classList.toggle("is-choice", controlType === "choice");
   controlsEl.classList.toggle("is-targets", controlType === "targets");
 
@@ -1415,105 +1413,142 @@ function renderControls(controlType) {
     return;
   }
 
-  if (controlType === "dot-next") {
-    const button = document.createElement("button");
-    button.className = "nav-btn nav-btn--dot";
-    button.type = "button";
-    button.setAttribute("aria-label", "Apri la slide successiva");
-    button.innerHTML = `
-      <img
-        class="icon-svg icon-svg--down"
-        src="./assets/images/cerchio-e-punto.svg"
-        alt=""
-        aria-hidden="true"
-      />
-    `;
-    button.addEventListener("click", () => {
-      next();
-    });
-    controlsEl.append(button);
-    return;
-  }
-
   if (controlType === "targets") {
     const targets = document.createElement("div");
     targets.className = "target-grid";
     targets.innerHTML = `
-      <button class="target-btn target-btn--profile" type="button" aria-label="Apri popup profilo">
-        <span class="target-corner target-corner--tl"></span>
-        <span class="target-corner target-corner--tr"></span>
-        <span class="target-corner target-corner--bl"></span>
-        <span class="target-corner target-corner--br"></span>
-        <img class="target-image" src="./assets/images/tomas.png" alt="Ritratto di Tomas Berardi" />
-      </button>
-      <button class="target-btn target-btn--helmet" type="button" aria-label="Apri popup casco">
-        <span class="target-corner target-corner--tl"></span>
-        <span class="target-corner target-corner--tr"></span>
-        <span class="target-corner target-corner--bl"></span>
-        <span class="target-corner target-corner--br"></span>
-        <img class="target-image target-image--helmet" src="./assets/images/casco.png" alt="Casco" />
-      </button>
-      <div class="helmet-upload-form" id="helmet-upload-form">
-        <label class="target-btn target-btn--input target-btn--description" for="helmet-description">
-          <span class="target-corner target-corner--tl"></span>
-          <span class="target-corner target-corner--tr"></span>
-          <span class="target-corner target-corner--bl"></span>
-          <span class="target-corner target-corner--br"></span>
-          <textarea
-            class="helmet-upload-textarea"
-            id="helmet-description"
-            name="description"
-            maxlength="2000"
-            placeholder="descrivi il casco che desideri"
-            aria-label="Descrizione casco"
-          ></textarea>
-          <button class="helmet-remove-btn helmet-remove-btn--text is-hidden" id="helmet-remove-text" type="button" aria-label="Elimina descrizione precedente">
-            Elimina
-          </button>
-          <button class="helmet-send-btn helmet-send-btn--text" id="helmet-send-text" type="button" aria-label="Invia descrizione">
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path d="M3 20L21 12L3 4L3 10L15 12L3 14L3 20Z"></path>
-            </svg>
-          </button>
-        </label>
+      <div class="targets-layout">
+        <section class="targets-screen targets-screen--intro">
+          <img class="targets-logo" src="./assets/images/logo.png" alt="Logo Intesta" />
+          <section class="target-btn target-btn--intro" aria-label="Invito creativo">
+            <span class="target-corner target-corner--tl"></span>
+            <span class="target-corner target-corner--tr"></span>
+            <span class="target-corner target-corner--bl"></span>
+            <span class="target-corner target-corner--br"></span>
+            <p class="targets-claim">Inventiamoci un casco<br />da bici bellissimo!</p>
+            <button class="targets-jump-btn" id="targets-jump-btn" type="button" aria-label="Scorri ai target profilo e casco">
+              <img class="icon-svg icon-svg--down" src="./assets/images/chevrons-down.svg" alt="" aria-hidden="true" />
+            </button>
+          </section>
+        </section>
 
-        <label class="target-btn target-btn--input target-btn--upload" for="helmet-image">
-          <span class="target-corner target-corner--tl"></span>
-          <span class="target-corner target-corner--tr"></span>
-          <span class="target-corner target-corner--bl"></span>
-          <span class="target-corner target-corner--br"></span>
-          <input
-            class="helmet-upload-file"
-            id="helmet-image"
-            name="image"
-            type="file"
-            accept="${HELMET_UPLOAD_ALLOWED_EXTENSIONS.join(",")}"
-          />
-          <img class="helmet-upload-icon" src="./assets/images/upload.svg" alt="" aria-hidden="true" />
-          <p class="helmet-upload-copy">carica foto del casco che desideri</p>
-          <p class="helmet-upload-meta">1 file • max ${formatBytes(HELMET_UPLOAD_MAX_BYTES)} • JPG/PNG/GIF/WEBP</p>
-          <img class="helmet-upload-preview is-hidden" id="helmet-image-preview" alt="Anteprima immagine casco caricata" />
-          <button class="helmet-remove-btn helmet-remove-btn--image is-hidden" id="helmet-remove-image" type="button" aria-label="Elimina foto precedente">
-            Elimina
+        <section class="targets-screen targets-screen--pair" id="targets-lower">
+          <button class="target-btn target-btn--profile" type="button" aria-label="Apri popup profilo">
+            <span class="target-corner target-corner--tl"></span>
+            <span class="target-corner target-corner--tr"></span>
+            <span class="target-corner target-corner--bl"></span>
+            <span class="target-corner target-corner--br"></span>
+            <img class="target-image" src="./assets/images/tomas.png" alt="Ritratto di Tomas Berardi" />
           </button>
-          <button class="helmet-send-btn helmet-send-btn--image" id="helmet-send-image" type="button" aria-label="Invia foto">
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path d="M3 20L21 12L3 4L3 10L15 12L3 14L3 20Z"></path>
-            </svg>
+          <button class="target-btn target-btn--helmet" type="button" aria-label="Apri popup casco">
+            <span class="target-corner target-corner--tl"></span>
+            <span class="target-corner target-corner--tr"></span>
+            <span class="target-corner target-corner--bl"></span>
+            <span class="target-corner target-corner--br"></span>
+            <img class="target-image target-image--helmet" src="./assets/images/casco.png" alt="Casco" />
           </button>
-        </label>
+        </section>
+
+        <section class="targets-screen targets-screen--pair">
+          <div class="helmet-upload-form" id="helmet-upload-form">
+            <label class="target-btn target-btn--input target-btn--description" for="helmet-description">
+              <span class="target-corner target-corner--tl"></span>
+              <span class="target-corner target-corner--tr"></span>
+              <span class="target-corner target-corner--bl"></span>
+              <span class="target-corner target-corner--br"></span>
+              <textarea
+                class="helmet-upload-textarea"
+                id="helmet-description"
+                name="description"
+                maxlength="2000"
+                placeholder="descrivi il casco che desideri"
+                aria-label="Descrizione casco"
+              ></textarea>
+              <button class="helmet-remove-btn helmet-remove-btn--text is-hidden" id="helmet-remove-text" type="button" aria-label="Elimina descrizione precedente">
+                Elimina
+              </button>
+              <button class="helmet-send-btn helmet-send-btn--text" id="helmet-send-text" type="button" aria-label="Invia descrizione">
+                <img class="helmet-send-icon" src="./assets/images/send.svg" alt="" aria-hidden="true" />
+              </button>
+            </label>
+
+            <label class="target-btn target-btn--input target-btn--upload" for="helmet-image">
+              <span class="target-corner target-corner--tl"></span>
+              <span class="target-corner target-corner--tr"></span>
+              <span class="target-corner target-corner--bl"></span>
+              <span class="target-corner target-corner--br"></span>
+              <input
+                class="helmet-upload-file"
+                id="helmet-image"
+                name="image"
+                type="file"
+                accept="${HELMET_UPLOAD_ALLOWED_EXTENSIONS.join(",")}"
+              />
+              <img class="helmet-upload-icon" src="./assets/images/upload.svg" alt="" aria-hidden="true" />
+              <p class="helmet-upload-copy">carica foto del casco che desideri</p>
+              <img class="helmet-upload-preview is-hidden" id="helmet-image-preview" alt="Anteprima immagine casco caricata" />
+              <button class="helmet-remove-btn helmet-remove-btn--image is-hidden" id="helmet-remove-image" type="button" aria-label="Elimina foto precedente">
+                Elimina
+              </button>
+              <button class="helmet-send-btn helmet-send-btn--image" id="helmet-send-image" type="button" aria-label="Invia foto">
+                <img class="helmet-send-icon" src="./assets/images/send.svg" alt="" aria-hidden="true" />
+              </button>
+            </label>
+
+            <a class="target-btn target-btn--input target-btn--download" href="./assets/images/base_casco_intesta.png" download="base_casco_intesta.png" aria-label="Scarica casco su cui disegnare">
+              <span class="target-corner target-corner--tl"></span>
+              <span class="target-corner target-corner--tr"></span>
+              <span class="target-corner target-corner--bl"></span>
+              <span class="target-corner target-corner--br"></span>
+              <img class="helmet-download-bg" src="./assets/images/base_casco_intesta.png" alt="" aria-hidden="true" />
+              <img class="helmet-download-icon" src="./assets/images/upload.svg" alt="" aria-hidden="true" />
+              <p class="helmet-download-copy">scarica casco<br />su cui disegnare</p>
+            </a>
+          </div>
+        </section>
       </div>
     `;
 
     const profileTarget = targets.querySelector(".target-btn--profile");
     const helmetTarget = targets.querySelector(".target-btn--helmet");
+    const targetsJumpButton = targets.querySelector("#targets-jump-btn");
+    const targetsLower = targets.querySelector("#targets-lower");
+    const activateTargetsArea = () => {
+      if (!hasTargetsScrolledDown) {
+        hasTargetsScrolledDown = true;
+        syncChatVisibility();
+      }
+    };
+    const onTargetsScroll = () => {
+      if (controlsEl.scrollTop > 10) {
+        activateTargetsArea();
+      }
+    };
+    controlsEl.onscroll = onTargetsScroll;
+    window.setTimeout(onTargetsScroll, 40);
+
+    if (targetsJumpButton instanceof HTMLButtonElement) {
+      targetsJumpButton.addEventListener("click", () => {
+        activateTargetsArea();
+        const jumpTo = targetsLower instanceof HTMLElement
+          ? targetsLower.offsetTop
+          : controlsEl.clientHeight;
+        controlsEl.scrollTo({
+          top: jumpTo,
+          behavior: "smooth"
+        });
+      });
+    }
+
     if (profileTarget instanceof HTMLElement) {
       profileTarget.addEventListener("click", () => {
+        activateTargetsArea();
         openProfilePopup("tomas");
       });
     }
     if (helmetTarget instanceof HTMLElement) {
       helmetTarget.addEventListener("click", () => {
+        activateTargetsArea();
         openProfilePopup("casco");
       });
     }
@@ -1805,12 +1840,6 @@ function renderControls(controlType) {
 }
 
 function paint(index) {
-  const finalTitle = hasHelmet ? "Non sarà mai come questo" : "Neanche io.";
-  const finalTitleEl = slideEls[OUTRO_SLIDE_INDEX]?.querySelector(".slide-title");
-  if (finalTitleEl instanceof HTMLElement) {
-    finalTitleEl.textContent = finalTitle;
-  }
-
   slideEls.forEach((slideEl, slideIndex) => {
     slideEl.classList.toggle("is-active", slideIndex === index);
   });
@@ -1845,23 +1874,15 @@ function goTo(index) {
   }
 
   const previous = current;
+  if (safeIndex === TARGETS_SLIDE_INDEX && previous !== TARGETS_SLIDE_INDEX) {
+    hasTargetsScrolledDown = false;
+  }
+  if (safeIndex !== TARGETS_SLIDE_INDEX) {
+    hasTargetsScrolledDown = false;
+  }
   current = safeIndex;
   animateTransition();
   paint(current);
-
-  if (targetsTransitionTimer !== null) {
-    window.clearTimeout(targetsTransitionTimer);
-    targetsTransitionTimer = null;
-  }
-  app.classList.remove("is-dot-to-targets");
-
-  if (previous === OUTRO_SLIDE_INDEX && safeIndex === TARGETS_SLIDE_INDEX) {
-    app.classList.add("is-dot-to-targets");
-    targetsTransitionTimer = window.setTimeout(() => {
-      app.classList.remove("is-dot-to-targets");
-      targetsTransitionTimer = null;
-    }, TARGETS_TRANSITION_MS);
-  }
 }
 
 function next() {
