@@ -12,11 +12,9 @@ if (window.location.hash === "#/admin") {
   const adminState = {
     authenticated: false,
     loading: true,
-    view: "review",
     pendingCount: 0,
-    currentReview: null,
-    submissions: [],
-    submissionsLoaded: false,
+    groups: [],
+    selectedDeviceId: null,
     requestPending: false,
     error: ""
   };
@@ -55,15 +53,19 @@ if (window.location.hash === "#/admin") {
   }
 
   async function adminRequest(path, options = {}) {
+    const hasFormData = options.formData instanceof FormData;
     const requestOptions = {
       method: options.method || "GET",
       credentials: "include",
       headers: {
-        "Accept": "application/json",
-        ...(options.body ? { "Content-Type": "application/json" } : {})
+        "Accept": "application/json"
       },
-      ...(options.body ? { body: JSON.stringify(options.body) } : {})
+      ...(hasFormData ? { body: options.formData } : {}),
+      ...(!hasFormData && options.body ? { body: JSON.stringify(options.body) } : {})
     };
+    if (!hasFormData && options.body) {
+      requestOptions.headers["Content-Type"] = "application/json";
+    }
 
     const base = getAdminApiBase();
     const response = await fetch(`${base}${path}`, requestOptions);
@@ -87,22 +89,16 @@ if (window.location.hash === "#/admin") {
     }
   }
 
-  async function refreshCurrentReview() {
-    const { response, payload } = await adminRequest("/review/next");
+  async function refreshGroups() {
+    const { response, payload } = await adminRequest("/device-groups");
     if (response.ok && payload?.result === 1) {
-      adminState.currentReview = payload.item || null;
-      return;
-    }
-    if (response.status === 401) {
-      adminState.authenticated = false;
-    }
-  }
-
-  async function refreshSubmissionsList() {
-    const { response, payload } = await adminRequest("/submissions");
-    if (response.ok && payload?.result === 1) {
-      adminState.submissions = Array.isArray(payload.items) ? payload.items : [];
-      adminState.submissionsLoaded = true;
+      adminState.groups = Array.isArray(payload.items) ? payload.items : [];
+      if (adminState.selectedDeviceId !== null) {
+        const exists = adminState.groups.some((group) => Number(group.deviceId) === Number(adminState.selectedDeviceId));
+        if (!exists) {
+          adminState.selectedDeviceId = null;
+        }
+      }
       return;
     }
     if (response.status === 401) {
@@ -112,53 +108,93 @@ if (window.location.hash === "#/admin") {
 
   async function loadAdminData() {
     await refreshPendingCount();
-    await refreshCurrentReview();
-    if (adminState.view === "list") {
-      await refreshSubmissionsList();
-    }
+    await refreshGroups();
   }
 
-  function reviewItemsMarkup() {
-    if (!adminState.currentReview || !Array.isArray(adminState.currentReview.items)) {
-      return `<p class="admin-empty">Nessun dispositivo in attesa di approvazione.</p>`;
+  function statusLabel(status) {
+    if (status === "approved") {
+      return "approvato";
     }
-    return adminState.currentReview.items.map((item) => {
-      const description = item.description ? `<p class="admin-item-text">${escapeHtml(item.description)}</p>` : "";
-      const image = item.imageUrl ? `<img class="admin-item-image" src="${escapeHtml(item.imageUrl)}" alt="Foto inviata dispositivo" loading="lazy" />` : "";
-      return `
-        <article class="admin-item-block">
-          <p class="admin-item-type">${item.type === "image" ? "Foto" : "Descrizione"} • ${escapeHtml(item.status || "")}</p>
-          ${description}
-          ${image}
-          <p class="admin-item-date">${escapeHtml(formatDateTime(item.createdAt))}</p>
-        </article>
-      `;
-    }).join("");
+    if (status === "rejected") {
+      return "non approvato";
+    }
+    return "in attesa";
   }
 
-  function listMarkup() {
-    if (!adminState.submissionsLoaded) {
-      return `<p class="admin-empty">Tocca "Aggiorna elenco" per caricare tutti gli invii.</p>`;
+  function groupsMarkup() {
+    if (adminState.groups.length === 0) {
+      return `<p class="admin-empty">Nessun invio presente.</p>`;
     }
-    if (adminState.submissions.length === 0) {
-      return `<p class="admin-empty">Nessun invio trovato.</p>`;
-    }
-    return adminState.submissions.map((item) => {
-      const statusClass = `admin-status admin-status--${escapeHtml(item.status || "pending")}`;
-      const description = item.description ? `<p class="admin-list-text">${escapeHtml(item.description)}</p>` : "";
-      const image = item.imageUrl ? `<img class="admin-list-image" src="${escapeHtml(item.imageUrl)}" alt="Foto inviata" loading="lazy" />` : "";
+    return adminState.groups.map((group, index) => {
+      const status = String(group.status || "pending");
+      const statusClass = `admin-status admin-status--${escapeHtml(status)}`;
+      const hasText = Boolean(group.text);
+      const hasImage = Boolean(group.image);
       return `
-        <article class="admin-list-card">
+        <button class="admin-list-card admin-list-card--button" type="button" data-admin-open-device="${Number(group.deviceId)}">
           <div class="admin-list-head">
-            <p class="admin-list-device">Dispositivo ${escapeHtml(item.deviceCode || "")}</p>
-            <span class="${statusClass}">${escapeHtml(item.status || "-")}</span>
+            <p class="admin-list-device">Invio ${index + 1}</p>
+            <span class="${statusClass}">${escapeHtml(statusLabel(status))}</span>
           </div>
-          <p class="admin-list-meta">${item.type === "image" ? "Foto" : "Descrizione"} • ${escapeHtml(formatDateTime(item.createdAt))}</p>
-          ${description}
-          ${image}
-        </article>
+          <p class="admin-list-meta">
+            ${hasText ? "Descrizione presente" : "Descrizione assente"} •
+            ${hasImage ? "Foto presente" : "Foto assente"} •
+            ${escapeHtml(formatDateTime(group.createdAt))}
+          </p>
+        </button>
       `;
     }).join("");
+  }
+
+  function selectedGroup() {
+    if (adminState.selectedDeviceId === null) {
+      return null;
+    }
+    return adminState.groups.find((group) => Number(group.deviceId) === Number(adminState.selectedDeviceId)) || null;
+  }
+
+  function popupMarkup() {
+    const group = selectedGroup();
+    if (!group) {
+      return "";
+    }
+    const textHtml = group.text
+      ? `<article class="admin-item-block">
+          <p class="admin-item-type">Descrizione</p>
+          <p class="admin-item-text">${escapeHtml(group.text.description || "")}</p>
+        </article>`
+      : `<article class="admin-item-block"><p class="admin-item-text">Nessuna descrizione inviata.</p></article>`;
+    const imageHtml = group.image
+      ? `<article class="admin-item-block">
+          <p class="admin-item-type">Foto</p>
+          <img class="admin-item-image" src="${escapeHtml(group.image.imageUrl || "")}" alt="Foto inviata" loading="lazy" />
+          <div class="admin-image-actions">
+            <a class="admin-btn admin-btn--ghost" href="${escapeHtml(group.image.imageUrl || "")}" download>Scarica foto</a>
+          </div>
+        </article>`
+      : `<article class="admin-item-block"><p class="admin-item-text">Nessuna foto inviata.</p></article>`;
+
+    return `
+      <section class="admin-modal" id="admin-modal" aria-modal="true" role="dialog" aria-label="Dettaglio invio">
+        <div class="admin-modal-backdrop" data-admin-close-modal></div>
+        <article class="admin-modal-card">
+          <button class="admin-modal-close" type="button" data-admin-close-modal aria-label="Chiudi dettaglio">×</button>
+          <h2 class="admin-modal-title">Dettaglio invio</h2>
+          <p class="admin-list-meta">Stato attuale: <span class="admin-status admin-status--${escapeHtml(group.status || "pending")}">${escapeHtml(statusLabel(String(group.status || "pending")))}</span></p>
+          ${textHtml}
+          ${imageHtml}
+          <form class="admin-image-upload-form" id="admin-image-upload-form">
+            <label class="admin-label" for="admin-image-file">Sostituisci foto</label>
+            <input id="admin-image-file" class="admin-input" type="file" accept=".jpg,.jpeg,.png,.gif,.webp" />
+            <button class="admin-btn admin-btn--ghost" type="submit">Carica nuova foto</button>
+          </form>
+          <div class="admin-decision-actions">
+            <button class="admin-btn admin-btn--success" type="button" data-admin-set-status="approved">Approva</button>
+            <button class="admin-btn admin-btn--danger" type="button" data-admin-set-status="rejected">Non approvato</button>
+          </div>
+        </article>
+      </section>
+    `;
   }
 
   function renderAdmin() {
@@ -226,167 +262,123 @@ if (window.location.hash === "#/admin") {
           <h1 class="admin-title">Moderazione invii</h1>
           <p class="admin-pending">Dispositivi da approvare: <strong>${adminState.pendingCount}</strong></p>
           <div class="admin-actions">
-            <button class="admin-btn ${adminState.view === "review" ? "admin-btn--primary" : "admin-btn--ghost"}" id="admin-view-review" type="button">Approva</button>
-            <button class="admin-btn ${adminState.view === "list" ? "admin-btn--primary" : "admin-btn--ghost"}" id="admin-view-list" type="button">Tutti gli invii</button>
+            <button class="admin-btn admin-btn--ghost" id="admin-refresh-list" type="button">Aggiorna elenco</button>
             <button class="admin-btn admin-btn--ghost" id="admin-logout" type="button">Logout</button>
           </div>
         </header>
         <main class="admin-main">
-          ${adminState.view === "review"
-            ? `
-              <section class="admin-review-view">
-                <p class="admin-hint">Swipe a sinistra per rifiutare, a destra per approvare.</p>
-                <article class="admin-review-card" id="admin-review-card">
-                  <p class="admin-review-device">Dispositivo: ${escapeHtml(adminState.currentReview?.deviceCode || "-")}</p>
-                  ${reviewItemsMarkup()}
-                </article>
-                <div class="admin-decision-actions">
-                  <button class="admin-btn admin-btn--danger" id="admin-reject" type="button" ${adminState.currentReview ? "" : "disabled"}>Rifiuta</button>
-                  <button class="admin-btn admin-btn--success" id="admin-approve" type="button" ${adminState.currentReview ? "" : "disabled"}>Approva</button>
-                </div>
-              </section>
-            `
-            : `
-              <section class="admin-list-view">
-                <button class="admin-btn admin-btn--ghost" id="admin-refresh-list" type="button">Aggiorna elenco</button>
-                <div class="admin-list-wrap">${listMarkup()}</div>
-              </section>
-            `}
+          <section class="admin-list-view">
+            <div class="admin-list-wrap">${groupsMarkup()}</div>
+          </section>
         </main>
+        ${popupMarkup()}
       </section>
     `;
 
-    const reviewButton = document.querySelector("#admin-view-review");
-    const listButton = document.querySelector("#admin-view-list");
     const logoutButton = document.querySelector("#admin-logout");
-    const approveButton = document.querySelector("#admin-approve");
-    const rejectButton = document.querySelector("#admin-reject");
     const refreshListButton = document.querySelector("#admin-refresh-list");
+    const openButtons = Array.from(document.querySelectorAll("[data-admin-open-device]"));
+    const closeModalButtons = Array.from(document.querySelectorAll("[data-admin-close-modal]"));
+    const statusButtons = Array.from(document.querySelectorAll("[data-admin-set-status]"));
+    const imageUploadForm = document.querySelector("#admin-image-upload-form");
 
-    if (reviewButton instanceof HTMLButtonElement) {
-      reviewButton.addEventListener("click", async () => {
-        adminState.view = "review";
-        adminState.loading = true;
-        renderAdmin();
-        await refreshPendingCount();
-        await refreshCurrentReview();
-        adminState.loading = false;
+    openButtons.forEach((button) => {
+      if (!(button instanceof HTMLButtonElement)) {
+        return;
+      }
+      button.addEventListener("click", () => {
+        const id = Number(button.dataset.adminOpenDevice || "0");
+        if (id > 0) {
+          adminState.selectedDeviceId = id;
+          renderAdmin();
+        }
+      });
+    });
+
+    closeModalButtons.forEach((button) => {
+      if (!(button instanceof HTMLElement)) {
+        return;
+      }
+      button.addEventListener("click", () => {
+        adminState.selectedDeviceId = null;
         renderAdmin();
       });
-    }
-    if (listButton instanceof HTMLButtonElement) {
-      listButton.addEventListener("click", async () => {
-        adminState.view = "list";
-        adminState.loading = true;
-        renderAdmin();
-        await refreshPendingCount();
-        await refreshSubmissionsList();
-        adminState.loading = false;
-        renderAdmin();
-      });
-    }
+    });
+
     if (logoutButton instanceof HTMLButtonElement) {
       logoutButton.addEventListener("click", async () => {
         await adminRequest("/logout", { method: "POST" });
         adminState.authenticated = false;
-        adminState.submissionsLoaded = false;
-        adminState.currentReview = null;
+        adminState.groups = [];
+        adminState.selectedDeviceId = null;
         adminState.error = "";
         renderAdmin();
-      });
-    }
-
-    async function submitDecision(action) {
-      if (!adminState.currentReview || adminState.requestPending) {
-        return;
-      }
-      adminState.requestPending = true;
-      try {
-        await adminRequest("/review/decision", {
-          method: "POST",
-          body: {
-            deviceId: adminState.currentReview.deviceId,
-            action
-          }
-        });
-        await refreshPendingCount();
-        await refreshCurrentReview();
-        if (adminState.view === "list" && adminState.submissionsLoaded) {
-          await refreshSubmissionsList();
-        }
-      } finally {
-        adminState.requestPending = false;
-        renderAdmin();
-      }
-    }
-
-    if (approveButton instanceof HTMLButtonElement) {
-      approveButton.addEventListener("click", () => {
-        void submitDecision("approve");
-      });
-    }
-    if (rejectButton instanceof HTMLButtonElement) {
-      rejectButton.addEventListener("click", () => {
-        void submitDecision("reject");
       });
     }
     if (refreshListButton instanceof HTMLButtonElement) {
       refreshListButton.addEventListener("click", async () => {
         adminState.loading = true;
         renderAdmin();
-        await refreshSubmissionsList();
+        await loadAdminData();
         adminState.loading = false;
         renderAdmin();
       });
     }
 
-    const reviewCard = document.querySelector("#admin-review-card");
-    if (reviewCard instanceof HTMLElement && adminState.currentReview) {
-      let startX = 0;
-      let active = false;
-      let currentDelta = 0;
-
-      const onPointerDown = (event) => {
-        active = true;
-        startX = event.clientX;
-        currentDelta = 0;
-        reviewCard.setPointerCapture(event.pointerId);
-      };
-      const onPointerMove = (event) => {
-        if (!active) {
+    statusButtons.forEach((button) => {
+      if (!(button instanceof HTMLButtonElement)) {
+        return;
+      }
+      button.addEventListener("click", async () => {
+        if (adminState.selectedDeviceId === null || adminState.requestPending) {
           return;
         }
-        currentDelta = event.clientX - startX;
-        reviewCard.style.transform = `translateX(${currentDelta}px) rotate(${(currentDelta / 18).toFixed(2)}deg)`;
-      };
-      const onPointerUp = async (event) => {
-        if (!active) {
+        const nextStatus = String(button.dataset.adminSetStatus || "");
+        if (!nextStatus) {
           return;
         }
-        active = false;
-        reviewCard.releasePointerCapture(event.pointerId);
-        const threshold = 110;
-        if (currentDelta > threshold) {
-          reviewCard.style.transform = "translateX(120vw) rotate(14deg)";
-          await submitDecision("approve");
-          return;
+        adminState.requestPending = true;
+        try {
+          await adminRequest("/device-status", {
+            method: "POST",
+            body: {
+              deviceId: adminState.selectedDeviceId,
+              status: nextStatus
+            }
+          });
+          await loadAdminData();
+        } finally {
+          adminState.requestPending = false;
+          renderAdmin();
         }
-        if (currentDelta < -threshold) {
-          reviewCard.style.transform = "translateX(-120vw) rotate(-14deg)";
-          await submitDecision("reject");
-          return;
-        }
-        reviewCard.style.transform = "";
-      };
-
-      reviewCard.addEventListener("pointerdown", onPointerDown);
-      reviewCard.addEventListener("pointermove", onPointerMove);
-      reviewCard.addEventListener("pointerup", (event) => {
-        void onPointerUp(event);
       });
-      reviewCard.addEventListener("pointercancel", () => {
-        active = false;
-        reviewCard.style.transform = "";
+    });
+
+    if (imageUploadForm instanceof HTMLFormElement) {
+      imageUploadForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        if (adminState.selectedDeviceId === null || adminState.requestPending) {
+          return;
+        }
+        const fileInput = imageUploadForm.querySelector("#admin-image-file");
+        const imageFile = fileInput instanceof HTMLInputElement && fileInput.files ? fileInput.files[0] : null;
+        if (!imageFile) {
+          return;
+        }
+        const formData = new FormData();
+        formData.append("deviceId", String(adminState.selectedDeviceId));
+        formData.append("image", imageFile, imageFile.name);
+        adminState.requestPending = true;
+        try {
+          await adminRequest("/device-image", {
+            method: "POST",
+            formData
+          });
+          await loadAdminData();
+        } finally {
+          adminState.requestPending = false;
+          renderAdmin();
+        }
       });
     }
   }

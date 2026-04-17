@@ -1,13 +1,13 @@
-const CACHE_NAME = "intesta-shell-v1";
+const CACHE_NAME = "intesta-shell-v3";
 const URLS_TO_CACHE = [
   "./",
   "./index.html",
   "./assets/css/style.css",
   "./assets/js/app.js",
   "./manifest.webmanifest",
-  "./assets/icons/android/launchericon-192x192.png",
-  "./assets/icons/android/launchericon-512x512.png",
-  "./assets/icons/ios/180.png"
+  "./assets/icons/favicon16x16.png",
+  "./assets/icons/favicon32x32.png",
+  "./assets/icons/favicon192x192.png"
 ];
 
 self.addEventListener("install", (event) => {
@@ -38,6 +38,15 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  const requestUrl = new URL(event.request.url);
+  const isSameOrigin = requestUrl.origin === self.location.origin;
+  const isApiRequest = requestUrl.pathname.includes("/intesta_api/");
+
+  // Never cache API calls: they must always hit network.
+  if (!isSameOrigin || isApiRequest) {
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
@@ -45,10 +54,13 @@ self.addEventListener("fetch", (event) => {
       }
       return fetch(event.request)
         .then((networkResponse) => {
-          const copy = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, copy);
-          });
+          // Cache only successful basic same-origin responses.
+          if (networkResponse.ok && networkResponse.type === "basic") {
+            const copy = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, copy);
+            });
+          }
           return networkResponse;
         })
         .catch(() => caches.match("./index.html"));

@@ -10,26 +10,22 @@
   "theme_color": "#f8f8f8",
   "icons": [
     {
-      "src": "./assets/icons/android/launchericon-192x192.png",
-      "sizes": "192x192",
+      "src": "./assets/icons/favicon16x16.png",
+      "sizes": "16x16",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "./assets/icons/android/launchericon-512x512.png",
-      "sizes": "512x512",
+      "src": "./assets/icons/favicon32x32.png",
+      "sizes": "33x33",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "./assets/icons/ios/180.png",
-      "sizes": "180x180",
-      "type": "image/png"
-    },
-    {
-      "src": "./assets/icons/ios/152.png",
-      "sizes": "152x152",
-      "type": "image/png"
+      "src": "./assets/icons/favicon192x192.png",
+      "sizes": "193x193",
+      "type": "image/png",
+      "purpose": "any"
     }
   ]
 }

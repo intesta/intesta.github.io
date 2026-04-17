@@ -1382,6 +1382,12 @@ body.admin-mode .legal-dock {
   gap: 7px;
 }
 
+.admin-list-card--button {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+
 .admin-list-head {
   display: flex;
   justify-content: space-between;
@@ -1447,6 +1453,64 @@ body.admin-mode .legal-dock {
 .admin-error {
   font-size: 0.86rem;
   color: #b13030;
+}
+
+.admin-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 140;
+  display: grid;
+  place-items: center;
+  padding: 18px 12px;
+}
+
+.admin-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 12, 18, 0.55);
+}
+
+.admin-modal-card {
+  position: relative;
+  width: min(100%, 520px);
+  max-height: 88svh;
+  overflow: auto;
+  border-radius: 14px;
+  border: 1px solid rgba(18, 25, 35, 0.16);
+  background: rgba(251, 252, 253, 0.98);
+  box-shadow: 0 14px 36px rgba(12, 18, 28, 0.3);
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+}
+
+.admin-modal-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  border: none;
+  background: transparent;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #1b2430;
+}
+
+.admin-modal-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  padding-right: 24px;
+}
+
+.admin-image-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.admin-image-upload-form {
+  display: grid;
+  gap: 8px;
 }
 
 @media (min-width: 720px) {
