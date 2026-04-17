@@ -12,7 +12,15 @@
   <meta name="developer" content="Alex Timoncini" />
   <meta name="robots" content="index, follow" />
   <meta name="theme-color" content="#f8f8f8" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="Intesta" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" type="image/png" sizes="16x16" href="./assets/icons/ios/16.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="./assets/icons/ios/32.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./assets/icons/android/launchericon-192x192.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="./assets/icons/ios/180.png" />
   <meta property="og:locale" content="it_IT" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Intesta" />
@@ -36,5 +44,12 @@
     <a class="legal-icon" href="./cookie.html" aria-label="Cookie tecnici" title="Cookie tecnici">CK</a>
   </nav>
   <script src="./assets/js/app.js"></script>
+  <script>
+    if ("serviceWorker" in navigator && window.isSecureContext) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./service-worker.js").catch(() => {});
+      });
+    }
+  </script>
 </body>
 </html>

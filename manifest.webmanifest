@@ -1,0 +1,35 @@
+{
+  "name": "Intesta",
+  "short_name": "Intesta",
+  "description": "Intesta e uno spazio creativo dove il casco da bici viene reinterpretato dalla community.",
+  "lang": "it-IT",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f8f8f8",
+  "theme_color": "#f8f8f8",
+  "icons": [
+    {
+      "src": "./assets/icons/android/launchericon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./assets/icons/android/launchericon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./assets/icons/ios/180.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "./assets/icons/ios/152.png",
+      "sizes": "152x152",
+      "type": "image/png"
+    }
+  ]
+}
