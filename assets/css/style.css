@@ -15,6 +15,8 @@
 :root {
   --site-max-width: 600px;
   --site-side: max(0px, calc((100vw - var(--site-max-width)) / 2));
+  --dot-grid-size: 30px;
+  --dot-radius: 1.7px;
 }
 
 body {
@@ -22,8 +24,8 @@ body {
   min-height: 100svh;
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
   background-color: #f8f8f8;
-  background-image: radial-gradient(circle, #dadada 1.45px, transparent 1.45px);
-  background-size: 27px 27px;
+  background-image: radial-gradient(circle, #dadada var(--dot-radius), transparent var(--dot-radius));
+  background-size: var(--dot-grid-size) var(--dot-grid-size);
   color: #111317;
   overflow: hidden;
 }
@@ -34,6 +36,32 @@ body {
   max-width: var(--site-max-width);
   margin: 0 auto;
   position: relative;
+  z-index: 0;
+}
+
+#app::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0;
+  background-image: radial-gradient(
+    circle,
+    var(--choice-sweep-color, #39b86a) var(--choice-sweep-dot-radius, var(--dot-radius)),
+    transparent var(--choice-sweep-dot-radius, var(--dot-radius))
+  );
+  background-size: var(--dot-grid-size) var(--dot-grid-size);
+  clip-path: inset(0 calc(100% - var(--choice-sweep-progress, 0%)) 0 0);
+  transition: opacity 120ms ease-out;
+}
+
+#app.is-choice-sweep::before {
+  opacity: 0.95;
+}
+
+#app.is-choice-sweep-left::before {
+  clip-path: inset(0 0 0 calc(100% - var(--choice-sweep-progress, 0%)));
 }
 
 .slider {
@@ -419,6 +447,14 @@ body {
   --title-shift: 10px;
 }
 
+#app.is-choice-sweep-right .slide.is-active .slide-title {
+  --title-shift: 12px;
+}
+
+#app.is-choice-sweep-left .slide.is-active .slide-title {
+  --title-shift: -12px;
+}
+
 .choice-btn.is-picked {
   transform: scale(1.12);
   filter: saturate(1.12);
@@ -656,6 +692,7 @@ body {
 .ai-chat-msg--assistant {
   background: #eef0f3;
   color: #20252c;
+  white-space: pre-wrap;
 }
 
 .ai-chat-msg--typing {
@@ -698,7 +735,6 @@ body {
   width: 42px;
   min-height: 34px;
   overflow: hidden;
-  white-space: pre-wrap;
   transition: width 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -756,8 +792,8 @@ body {
   left: var(--site-side);
   z-index: 42;
   background-color: #f8f8f8;
-  background-image: radial-gradient(circle, #dadada 1.45px, transparent 1.45px);
-  background-size: 27px 27px;
+  background-image: radial-gradient(circle, #dadada var(--dot-radius), transparent var(--dot-radius));
+  background-size: var(--dot-grid-size) var(--dot-grid-size);
   opacity: 0;
   pointer-events: none;
   transition: opacity 320ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -953,6 +989,7 @@ body {
   .slide-subtitle,
   .nav-btn,
   .choice-btn,
+  #app::before,
   .target-btn--profile,
   .profile-popup,
   .profile-popup-body,

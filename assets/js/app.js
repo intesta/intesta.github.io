@@ -13,6 +13,8 @@ const OUTRO_SLIDE_INDEX = 4;
 const TARGETS_SLIDE_INDEX = 5;
 const POPUP_ANIMATION_MS = 320;
 const TARGETS_TRANSITION_MS = 560;
+const CHOICE_ANIMATION_MS = 340;
+const CHOICE_SWEEP_DOT_GROWTH_PX = 0.24;
 
 const app = document.querySelector("#app");
 
@@ -144,6 +146,7 @@ let touchStartY = 0;
 let isAnimating = false;
 let wheelLocked = false;
 let isChoiceAnimating = false;
+let choiceSweepRafId = null;
 let hasHelmet = false;
 let popupCloseTimer = null;
 let currentPopupMode = "profile";
@@ -219,13 +222,30 @@ function appendChatMessage(role, text) {
   msg.className = `ai-chat-msg ai-chat-msg--${role}`;
   msg.textContent = text;
   chatMessagesEl.append(msg);
-  chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+  scrollAiChatToBottom(msg);
   return msg;
 }
 
 function sleep(ms) {
   return new Promise((resolve) => {
     window.setTimeout(resolve, ms);
+  });
+}
+
+function scrollAiChatToBottom(anchorEl) {
+  if (!chatMessagesEl) {
+    return;
+  }
+  const run = () => {
+    if (anchorEl && typeof anchorEl.scrollIntoView === "function") {
+      anchorEl.scrollIntoView({ block: "end", behavior: "instant" });
+    }
+    chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+  };
+  run();
+  window.requestAnimationFrame(() => {
+    run();
+    window.requestAnimationFrame(run);
   });
 }
 
@@ -242,7 +262,7 @@ function showTypingIndicator() {
     <span class="ai-dot"></span>
   `;
   chatMessagesEl.append(msg);
-  chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+  scrollAiChatToBottom(msg);
   typingIndicatorEl = msg;
 }
 
@@ -263,6 +283,7 @@ async function appendAssistantMessageTypewriter(text) {
     msg.className = "ai-chat-msg ai-chat-msg--assistant ai-chat-msg--typewriter ai-chat-msg--from-dots";
     msg.textContent = "";
     chatMessagesEl.append(msg);
+    scrollAiChatToBottom(msg);
   }
 
   msg.className = "ai-chat-msg ai-chat-msg--assistant ai-chat-msg--typewriter ai-chat-msg--from-dots";
@@ -275,13 +296,14 @@ async function appendAssistantMessageTypewriter(text) {
   const fullText = text || "";
   for (let i = 0; i < fullText.length; i += 1) {
     msg.textContent += fullText[i];
-    chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+    scrollAiChatToBottom(msg);
     await sleep(16);
   }
 
   msg.classList.remove("ai-chat-msg--typewriter");
   msg.classList.remove("ai-chat-msg--from-dots");
   msg.classList.remove("is-expanding");
+  scrollAiChatToBottom(msg);
   return msg;
 }
 
@@ -513,6 +535,47 @@ function setChoiceAnimationState(choice, enabled) {
   }
 }
 
+function clearChoiceDotSweep() {
+  if (choiceSweepRafId !== null) {
+    window.cancelAnimationFrame(choiceSweepRafId);
+    choiceSweepRafId = null;
+  }
+  app.classList.remove("is-choice-sweep", "is-choice-sweep-right", "is-choice-sweep-left");
+  app.style.removeProperty("--choice-sweep-progress");
+  app.style.removeProperty("--choice-sweep-color");
+  app.style.removeProperty("--choice-sweep-dot-radius");
+}
+
+function startChoiceDotSweep(choice) {
+  clearChoiceDotSweep();
+  const directionClass = choice === "yes" ? "is-choice-sweep-right" : "is-choice-sweep-left";
+  const sweepColor = choice === "yes" ? "#39b86a" : "#e14a4a";
+  const startAt = performance.now();
+  const dotRadiusValue = window.getComputedStyle(document.documentElement).getPropertyValue("--dot-radius");
+  const baseDotRadius = Number.parseFloat(dotRadiusValue) || 1.7;
+
+  app.classList.add("is-choice-sweep", directionClass);
+  app.style.setProperty("--choice-sweep-color", sweepColor);
+  app.style.setProperty("--choice-sweep-progress", "0%");
+  app.style.setProperty("--choice-sweep-dot-radius", `${baseDotRadius.toFixed(3)}px`);
+
+  const animate = (now) => {
+    const rawProgress = Math.min((now - startAt) / CHOICE_ANIMATION_MS, 1);
+    const easedProgress = 1 - (1 - rawProgress) ** 3;
+    const dotGrow = Math.sin(rawProgress * Math.PI) * CHOICE_SWEEP_DOT_GROWTH_PX;
+
+    app.style.setProperty("--choice-sweep-progress", `${(easedProgress * 100).toFixed(2)}%`);
+    app.style.setProperty("--choice-sweep-dot-radius", `${(baseDotRadius + dotGrow).toFixed(3)}px`);
+    if (rawProgress < 1) {
+      choiceSweepRafId = window.requestAnimationFrame(animate);
+      return;
+    }
+    app.style.setProperty("--choice-sweep-dot-radius", `${baseDotRadius.toFixed(3)}px`);
+    choiceSweepRafId = null;
+  };
+  choiceSweepRafId = window.requestAnimationFrame(animate);
+}
+
 function runChoiceAnimation(choice, onDone) {
   const buttonSelector = choice === "no" ? ".choice-btn--no" : ".choice-btn--yes";
   const button = controlsEl.querySelector(buttonSelector);
@@ -523,14 +586,16 @@ function runChoiceAnimation(choice, onDone) {
 
   isChoiceAnimating = true;
   setChoiceAnimationState(choice, true);
+  startChoiceDotSweep(choice);
   button.classList.add("is-picked");
 
   window.setTimeout(() => {
     button.classList.remove("is-picked");
     setChoiceAnimationState(choice, false);
+    clearChoiceDotSweep();
     isChoiceAnimating = false;
     onDone();
-  }, 240);
+  }, CHOICE_ANIMATION_MS);
 }
 
 function handleChoice(choice) {
