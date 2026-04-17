@@ -8,7 +8,7 @@ if (window.location.hash === "#/admin") {
     throw new Error("Missing #app container.");
   }
 
-  const ADMIN_API_BASE = "https://foxly.it/intesta_api/public/admin";
+  const ADMIN_API_BASE = "https://foxly.it/intesta_api/admin";
   const adminState = {
     authenticated: false,
     loading: true,
