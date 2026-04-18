@@ -1818,7 +1818,7 @@ function renderControls(controlType) {
               <p class="helmet-upload-copy">carica foto del casco che desideri</p>
               <img class="helmet-upload-preview is-hidden" id="helmet-image-preview" alt="Anteprima immagine casco caricata" />
               <button class="helmet-remove-btn helmet-remove-btn--image is-hidden" id="helmet-remove-image" type="button" aria-label="Elimina foto precedente">
-                <i class="feather-x-square helmet-remove-icon" aria-hidden="true"></i>
+                <img class="helmet-remove-icon" src="./assets/images/close_popup.svg" alt="" aria-hidden="true" />
               </button>
               <button class="helmet-send-btn helmet-send-btn--image" id="helmet-send-image" type="button" aria-label="Invia foto">
                 <img class="helmet-send-icon" src="./assets/images/send.svg" alt="" aria-hidden="true" />
@@ -1860,7 +1860,7 @@ function renderControls(controlType) {
               >
                 <div class="helmet-send-popup-panel">
                   <span class="helmet-send-popup-mark helmet-send-popup-mark--danger" aria-hidden="true">
-                    <i class="feather-alert-circle helmet-send-popup-icon"></i>
+                    <img class="helmet-send-popup-alert" src="./assets/images/alert-circle.svg" alt="" />
                   </span>
                   <p class="helmet-send-popup-title" id="helmet-remove-popup-image-title">vuoi eliminare l'immagine?</p>
                   <div class="helmet-send-popup-actions">
