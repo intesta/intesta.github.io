@@ -469,7 +469,7 @@ app.innerHTML = `
   </section>
   <section class="profile-popup" id="profile-popup" hidden aria-modal="true" role="dialog" aria-label="Profilo di Tomas Berardi">
     <button class="profile-popup-close" id="profile-popup-close" type="button" aria-label="Chiudi popup profilo">
-      <img class="icon-svg icon-svg--choice" src="./assets/images/x.svg" alt="" aria-hidden="true" />
+      <img class="profile-popup-close-icon" src="./assets/images/x-square.svg" alt="" aria-hidden="true" />
     </button>
     <div class="profile-popup-body">
       <article class="profile-card" aria-label="Profilo di Tomas Berardi">
@@ -493,6 +493,24 @@ app.innerHTML = `
           <a href="mailto:intesta2026@gmail.com">intesta2026@gmail.com</a>
         </p>
       </article>
+    </div>
+  </section>
+  <section class="gallery-preview" id="gallery-preview" hidden aria-modal="true" role="dialog" aria-label="Anteprima immagine galleria">
+    <div class="gallery-preview-backdrop" id="gallery-preview-backdrop"></div>
+    <div class="gallery-preview-shell">
+      <div class="gallery-preview-media">
+        <button class="gallery-preview-close" id="gallery-preview-close" type="button" aria-label="Chiudi anteprima immagine">
+          <i class="feather-x-square gallery-preview-close-icon" aria-hidden="true"></i>
+        </button>
+        <img class="gallery-preview-image" id="gallery-preview-image" src="" alt="Anteprima lavoro approvato" />
+        <button class="gallery-like-btn" id="gallery-like-btn" type="button" aria-label="Metti mi piace alla foto">
+          <svg class="gallery-like-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 1 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"></path>
+          </svg>
+          <span class="gallery-like-count" id="gallery-like-count">0</span>
+        </button>
+      </div>
+      <p class="gallery-preview-caption" id="gallery-preview-caption" hidden></p>
     </div>
   </section>
   <section class="ai-chat" id="ai-chat" aria-label="Chat assistente AI">
@@ -528,6 +546,13 @@ const controlsEl = app.querySelector("#slide-controls");
 const popupEl = app.querySelector("#profile-popup");
 const popupCloseEl = app.querySelector("#profile-popup-close");
 const popupCardEl = app.querySelector(".profile-card");
+const galleryPreviewEl = app.querySelector("#gallery-preview");
+const galleryPreviewBackdropEl = app.querySelector("#gallery-preview-backdrop");
+const galleryPreviewCloseEl = app.querySelector("#gallery-preview-close");
+const galleryPreviewImageEl = app.querySelector("#gallery-preview-image");
+const galleryPreviewCaptionEl = app.querySelector("#gallery-preview-caption");
+const galleryLikeBtnEl = app.querySelector("#gallery-like-btn");
+const galleryLikeCountEl = app.querySelector("#gallery-like-count");
 const chatRootEl = app.querySelector("#ai-chat");
 const chatLauncherEl = app.querySelector("#ai-chat-launcher");
 const chatPanelEl = app.querySelector("#ai-chat-panel");
@@ -547,6 +572,13 @@ if (
   !popupEl ||
   !popupCloseEl ||
   !popupCardEl ||
+  !galleryPreviewEl ||
+  !galleryPreviewBackdropEl ||
+  !galleryPreviewCloseEl ||
+  !galleryPreviewImageEl ||
+  !galleryPreviewCaptionEl ||
+  !galleryLikeBtnEl ||
+  !galleryLikeCountEl ||
   !chatRootEl ||
   !chatLauncherEl ||
   !chatPanelEl ||
@@ -576,6 +608,34 @@ legalLinkEls.forEach((linkEl) => {
   });
 });
 
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") {
+    return;
+  }
+  if (galleryPreviewEl instanceof HTMLElement && !galleryPreviewEl.hidden) {
+    e.preventDefault();
+    closeGalleryPreview();
+    return;
+  }
+  const openPopup = document.querySelector(".helmet-send-popup.is-open");
+  if (!(openPopup instanceof HTMLElement)) {
+    return;
+  }
+  e.preventDefault();
+  openPopup.classList.remove("is-open");
+  openPopup.setAttribute("aria-hidden", "true");
+  let returnId = "helmet-send-image";
+  if (openPopup.id === "helmet-send-popup-text") {
+    returnId = "helmet-send-text";
+  } else if (openPopup.id === "helmet-remove-popup-image") {
+    returnId = "helmet-remove-image";
+  }
+  const returnBtn = document.getElementById(returnId);
+  if (returnBtn instanceof HTMLElement) {
+    returnBtn.focus();
+  }
+});
+
 let current = 0;
 let touchStartX = 0;
 let touchStartY = 0;
@@ -594,6 +654,108 @@ let persistedDeviceCode = "";
 let isDeviceLocked = false;
 let lockedContribution = null;
 let toastTimerId = null;
+let galleryPreviewCloseTimerId = null;
+const GALLERY_PREVIEW_ANIMATION_MS = 220;
+let currentGalleryPreviewSrc = "";
+let currentGalleryPreviewAssetKey = "";
+let currentGalleryLikeCount = 0;
+let currentGalleryLikedByViewer = false;
+
+function syncGalleryLikeUi() {
+  if (!(galleryLikeBtnEl instanceof HTMLButtonElement) || !(galleryLikeCountEl instanceof HTMLElement)) {
+    return;
+  }
+  galleryLikeCountEl.textContent = String(Math.max(0, currentGalleryLikeCount));
+  galleryLikeBtnEl.classList.toggle("is-liked", currentGalleryLikedByViewer);
+}
+
+function openGalleryPreview(imageSrc, showAlexCaption = false, assetKey = "", likeCount = 0, likedByViewer = false) {
+  if (!(galleryPreviewEl instanceof HTMLElement) || !(galleryPreviewImageEl instanceof HTMLImageElement) || !(galleryPreviewCaptionEl instanceof HTMLElement)) {
+    return;
+  }
+  if (galleryPreviewCloseTimerId !== null) {
+    window.clearTimeout(galleryPreviewCloseTimerId);
+    galleryPreviewCloseTimerId = null;
+  }
+  galleryPreviewImageEl.src = imageSrc;
+  currentGalleryPreviewSrc = imageSrc;
+  currentGalleryPreviewAssetKey = assetKey;
+  currentGalleryLikeCount = Number.isFinite(likeCount) ? Math.max(0, Math.floor(likeCount)) : 0;
+  currentGalleryLikedByViewer = Boolean(likedByViewer);
+  if (galleryLikeBtnEl instanceof HTMLButtonElement) {
+    galleryLikeBtnEl.disabled = !currentGalleryPreviewAssetKey;
+  }
+  syncGalleryLikeUi();
+  galleryPreviewCaptionEl.hidden = !showAlexCaption;
+  galleryPreviewCaptionEl.innerHTML = showAlexCaption ? "ALEX TIMONCINI <br> WEB DEVELOPER DI INTESTA" : "";
+  galleryPreviewEl.hidden = false;
+  galleryPreviewEl.classList.remove("is-closing");
+  window.requestAnimationFrame(() => {
+    galleryPreviewEl.classList.add("is-open");
+  });
+}
+
+function closeGalleryPreview() {
+  if (!(galleryPreviewEl instanceof HTMLElement) || !(galleryPreviewImageEl instanceof HTMLImageElement) || !(galleryPreviewCaptionEl instanceof HTMLElement)) {
+    return;
+  }
+  if (galleryPreviewEl.hidden) {
+    return;
+  }
+  galleryPreviewEl.classList.remove("is-open");
+  galleryPreviewEl.classList.add("is-closing");
+  if (galleryPreviewCloseTimerId !== null) {
+    window.clearTimeout(galleryPreviewCloseTimerId);
+  }
+  galleryPreviewCloseTimerId = window.setTimeout(() => {
+    galleryPreviewEl.hidden = true;
+    galleryPreviewEl.classList.remove("is-closing");
+    galleryPreviewImageEl.src = "";
+    currentGalleryPreviewSrc = "";
+    currentGalleryPreviewAssetKey = "";
+    currentGalleryLikeCount = 0;
+    currentGalleryLikedByViewer = false;
+    if (galleryLikeBtnEl instanceof HTMLButtonElement) {
+      galleryLikeBtnEl.disabled = false;
+    }
+    galleryPreviewCaptionEl.hidden = true;
+    galleryPreviewCaptionEl.textContent = "";
+    galleryPreviewCloseTimerId = null;
+  }, GALLERY_PREVIEW_ANIMATION_MS);
+}
+
+if (galleryPreviewBackdropEl instanceof HTMLElement) {
+  galleryPreviewBackdropEl.addEventListener("click", closeGalleryPreview);
+}
+if (galleryPreviewCloseEl instanceof HTMLButtonElement) {
+  galleryPreviewCloseEl.addEventListener("click", closeGalleryPreview);
+}
+if (galleryLikeBtnEl instanceof HTMLButtonElement) {
+  galleryLikeBtnEl.addEventListener("click", async () => {
+    if (!currentGalleryPreviewSrc || !currentGalleryPreviewAssetKey) {
+      return;
+    }
+    const nextLiked = !currentGalleryLikedByViewer;
+    galleryLikeBtnEl.disabled = true;
+    try {
+      const payload = await submitGalleryLike(currentGalleryPreviewAssetKey, nextLiked);
+      currentGalleryLikedByViewer = Boolean(payload.likedByViewer);
+      currentGalleryLikeCount = Number.isFinite(payload.likeCount) ? Math.max(0, Math.floor(payload.likeCount)) : currentGalleryLikeCount;
+      syncGalleryLikeUi();
+      const activeTileButtons = document.querySelectorAll(`.helmet-tile--clickable[data-gallery-asset-key="${currentGalleryPreviewAssetKey}"]`);
+      activeTileButtons.forEach((buttonEl) => {
+        if (buttonEl instanceof HTMLElement) {
+          buttonEl.dataset.galleryLikeCount = String(currentGalleryLikeCount);
+          buttonEl.dataset.galleryLiked = currentGalleryLikedByViewer ? "1" : "0";
+        }
+      });
+    } catch (_error) {
+      showUploadToast("Like non disponibile al momento.", "error");
+    } finally {
+      galleryLikeBtnEl.disabled = false;
+    }
+  });
+}
 
 const CHAT_SITE_CONTEXT = `
 Sito: Intesta (presentazione mobile-first in italiano).
@@ -672,6 +834,16 @@ const DEVICE_DELETE_SUBMISSION_ENDPOINTS = [
   "https://foxly.it/intesta_api/public/devices/delete-submission",
   "./intesta_api/devices/delete-submission"
 ];
+const GALLERY_APPROVED_IMAGE_ENDPOINTS = [
+  "https://foxly.it/intesta_api/gallery/approved-images",
+  "https://foxly.it/intesta_api/public/gallery/approved-images",
+  "./intesta_api/gallery/approved-images"
+];
+const GALLERY_LIKE_ENDPOINTS = [
+  "https://foxly.it/intesta_api/gallery/like",
+  "https://foxly.it/intesta_api/public/gallery/like",
+  "./intesta_api/gallery/like"
+];
 
 const slideEls = slides.map((slideData) => {
   const section = document.createElement("section");
@@ -728,6 +900,18 @@ function getDeviceDeleteSubmissionEndpoints() {
   const uploadConfig = window.INTESA_UPLOAD || {};
   const customEndpoint = uploadConfig.deviceDeleteEndpoint ? String(uploadConfig.deviceDeleteEndpoint) : "";
   return [customEndpoint, ...DEVICE_DELETE_SUBMISSION_ENDPOINTS].filter((value, index, arr) => value && arr.indexOf(value) === index);
+}
+
+function getGalleryApprovedImageEndpoints() {
+  const uploadConfig = window.INTESA_UPLOAD || {};
+  const customEndpoint = uploadConfig.galleryEndpoint ? String(uploadConfig.galleryEndpoint) : "";
+  return [customEndpoint, ...GALLERY_APPROVED_IMAGE_ENDPOINTS].filter((value, index, arr) => value && arr.indexOf(value) === index);
+}
+
+function getGalleryLikeEndpoints() {
+  const uploadConfig = window.INTESA_UPLOAD || {};
+  const customEndpoint = uploadConfig.galleryLikeEndpoint ? String(uploadConfig.galleryLikeEndpoint) : "";
+  return [customEndpoint, ...GALLERY_LIKE_ENDPOINTS].filter((value, index, arr) => value && arr.indexOf(value) === index);
 }
 
 function getStoredDeviceCode() {
@@ -885,6 +1069,127 @@ async function deleteDeviceSubmission(deviceCode, type) {
         return payload;
       }
       lastError = new Error(payload && payload.msg ? payload.msg : `Eliminazione non riuscita (HTTP ${response.status}).`);
+      if (response.status !== 404) {
+        throw lastError;
+      }
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error("Errore di rete.");
+      if (String(endpoint).includes("://")) {
+        continue;
+      }
+      throw lastError;
+    }
+  }
+  throw lastError;
+}
+
+async function fetchApprovedGalleryImages() {
+  const deviceCode = persistedDeviceCode || getStoredDeviceCode();
+  const endpoints = getGalleryApprovedImageEndpoints();
+  for (const endpoint of endpoints) {
+    try {
+      const endpointUrl = deviceCode
+        ? `${endpoint}${endpoint.includes("?") ? "&" : "?"}deviceCode=${encodeURIComponent(deviceCode)}`
+        : endpoint;
+      const response = await fetch(endpointUrl, { method: "GET" });
+      let payload = null;
+      try {
+        payload = await response.json();
+      } catch (_error) {
+        payload = null;
+      }
+      if (!response.ok) {
+        if (response.status === 404) {
+          continue;
+        }
+        break;
+      }
+      if (!payload || payload.result !== 1) {
+        continue;
+      }
+      const items = Array.isArray(payload.items) ? payload.items : [];
+      const approved = items.map((item) => {
+        if (!item || typeof item !== "object") {
+          return null;
+        }
+        const src = typeof item.imageUrl === "string" && item.imageUrl
+          ? item.imageUrl
+          : (typeof item.imagePath === "string" && item.imagePath ? buildContributionImageUrl(item.imagePath) : "");
+        if (!src) {
+          return null;
+        }
+        return {
+          src,
+          assetKey: typeof item.assetKey === "string" && item.assetKey ? item.assetKey : "",
+          likeCount: Number.isFinite(Number(item.likeCount)) ? Number(item.likeCount) : 0,
+          likedByViewer: Boolean(item.likedByViewer)
+        };
+      }).filter(Boolean);
+      const alex = payload.alex && typeof payload.alex === "object"
+        ? {
+          src: "./assets/images/alex.png",
+          assetKey: typeof payload.alex.assetKey === "string" && payload.alex.assetKey ? payload.alex.assetKey : "alex",
+          likeCount: Number.isFinite(Number(payload.alex.likeCount)) ? Number(payload.alex.likeCount) : 0,
+          likedByViewer: Boolean(payload.alex.likedByViewer),
+          isAlex: true
+        }
+        : {
+          src: "./assets/images/alex.png",
+          assetKey: "alex",
+          likeCount: 0,
+          likedByViewer: false,
+          isAlex: true
+        };
+      return [alex, ...approved];
+    } catch (_error) {
+      if (String(endpoint).includes("://")) {
+        continue;
+      }
+      break;
+    }
+  }
+  return [{
+    src: "./assets/images/alex.png",
+    assetKey: "alex",
+    likeCount: 0,
+    likedByViewer: false,
+    isAlex: true
+  }];
+}
+
+async function submitGalleryLike(assetKey, liked) {
+  const deviceCode = persistedDeviceCode || (await ensureDeviceCode());
+  if (!deviceCode) {
+    throw new Error("Dispositivo non disponibile.");
+  }
+  const endpoints = getGalleryLikeEndpoints();
+  let lastError = new Error("Endpoint like non disponibile.");
+  for (const endpoint of endpoints) {
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          deviceCode,
+          assetKey,
+          liked
+        })
+      });
+      let payload = null;
+      try {
+        payload = await response.json();
+      } catch (_error) {
+        payload = null;
+      }
+      if (response.ok && payload && payload.result === 1) {
+        return {
+          likeCount: Number.isFinite(payload.likeCount) ? Number(payload.likeCount) : 0,
+          likedByViewer: Boolean(payload.likedByViewer)
+        };
+      }
+      lastError = new Error(payload && payload.msg ? payload.msg : `Like non riuscito (HTTP ${response.status}).`);
       if (response.status !== 404) {
         throw lastError;
       }
@@ -1471,6 +1776,33 @@ function renderControls(controlType) {
               <button class="helmet-send-btn helmet-send-btn--text" id="helmet-send-text" type="button" aria-label="Invia descrizione">
                 <img class="helmet-send-icon" src="./assets/images/send.svg" alt="" aria-hidden="true" />
               </button>
+              <div
+                class="helmet-send-popup"
+                id="helmet-send-popup-text"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="helmet-send-popup-text-title"
+                aria-hidden="true"
+              >
+                <div class="helmet-send-popup-panel">
+                  <span class="helmet-send-popup-mark helmet-send-popup-mark--ok" aria-hidden="true">
+                    <img class="helmet-send-popup-check" src="./assets/images/check-circle.svg" alt="" />
+                  </span>
+                  <p class="helmet-send-popup-title" id="helmet-send-popup-text-title">vuoi inviare la descrizione?</p>
+                  <label class="helmet-send-popup-consent" for="helmet-send-popup-text-consent">
+                    <input type="checkbox" class="helmet-send-popup-consent-input" id="helmet-send-popup-text-consent" />
+                    <span class="helmet-send-popup-consent-copy">accetto e dichiaro di aver letto l'informativa sulla privacy</span>
+                  </label>
+                  <div class="helmet-send-popup-actions">
+                    <button type="button" class="helmet-send-popup-choice helmet-send-popup-choice--cancel" id="helmet-send-popup-text-cancel" aria-label="Annulla invio descrizione">
+                      <i class="feather-x helmet-send-popup-choice-icon"></i>
+                    </button>
+                    <button type="button" class="helmet-send-popup-choice helmet-send-popup-choice--confirm" id="helmet-send-popup-text-confirm" aria-label="Conferma invio descrizione">
+                      <i class="feather-circle helmet-send-popup-choice-icon"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
             </label>
 
             <label class="target-btn target-btn--input target-btn--upload" for="helmet-image">
@@ -1494,6 +1826,56 @@ function renderControls(controlType) {
               <button class="helmet-send-btn helmet-send-btn--image" id="helmet-send-image" type="button" aria-label="Invia foto">
                 <img class="helmet-send-icon" src="./assets/images/send.svg" alt="" aria-hidden="true" />
               </button>
+              <div
+                class="helmet-send-popup"
+                id="helmet-send-popup-image"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="helmet-send-popup-image-title"
+                aria-hidden="true"
+              >
+                <div class="helmet-send-popup-panel">
+                  <span class="helmet-send-popup-mark helmet-send-popup-mark--ok" aria-hidden="true">
+                    <img class="helmet-send-popup-check" src="./assets/images/check-circle.svg" alt="" />
+                  </span>
+                  <p class="helmet-send-popup-title" id="helmet-send-popup-image-title">vuoi inviare l'immagine?<br />potrebbe essere mostrata nel catalogo del sito</p>
+                  <label class="helmet-send-popup-consent" for="helmet-send-popup-image-consent">
+                    <input type="checkbox" class="helmet-send-popup-consent-input" id="helmet-send-popup-image-consent" />
+                    <span class="helmet-send-popup-consent-copy">accetto e dichiaro di aver letto l'informativa sulla privacy</span>
+                  </label>
+                  <div class="helmet-send-popup-actions">
+                    <button type="button" class="helmet-send-popup-choice helmet-send-popup-choice--cancel" id="helmet-send-popup-image-cancel" aria-label="Annulla invio immagine">
+                      <i class="feather-x helmet-send-popup-choice-icon"></i>
+                    </button>
+                    <button type="button" class="helmet-send-popup-choice helmet-send-popup-choice--confirm" id="helmet-send-popup-image-confirm" aria-label="Conferma invio immagine">
+                      <i class="feather-circle helmet-send-popup-choice-icon"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div
+                class="helmet-send-popup helmet-send-popup--danger"
+                id="helmet-remove-popup-image"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="helmet-remove-popup-image-title"
+                aria-hidden="true"
+              >
+                <div class="helmet-send-popup-panel">
+                  <span class="helmet-send-popup-mark helmet-send-popup-mark--danger" aria-hidden="true">
+                    <i class="feather-alert-circle helmet-send-popup-icon"></i>
+                  </span>
+                  <p class="helmet-send-popup-title" id="helmet-remove-popup-image-title">vuoi eliminare l'immagine?</p>
+                  <div class="helmet-send-popup-actions">
+                    <button type="button" class="helmet-send-popup-choice helmet-send-popup-choice--cancel" id="helmet-remove-popup-image-cancel" aria-label="Annulla eliminazione immagine">
+                      <i class="feather-x helmet-send-popup-choice-icon"></i>
+                    </button>
+                    <button type="button" class="helmet-send-popup-choice helmet-send-popup-choice--confirm" id="helmet-remove-popup-image-confirm" aria-label="Conferma eliminazione immagine">
+                      <i class="feather-circle helmet-send-popup-choice-icon"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
             </label>
 
             <a class="target-btn target-btn--input target-btn--download" href="./assets/images/base_casco_intesta.png" download="base_casco_intesta.png" aria-label="Scarica casco su cui disegnare">
@@ -1506,6 +1888,16 @@ function renderControls(controlType) {
               <p class="helmet-download-copy">scarica casco<br />su cui disegnare</p>
             </a>
           </div>
+        </section>
+
+        <section class="targets-screen targets-screen--gallery">
+          <section class="target-btn target-btn--gallery" aria-label="Mosaico contenuti casco">
+            <span class="target-corner target-corner--tl"></span>
+            <span class="target-corner target-corner--tr"></span>
+            <span class="target-corner target-corner--bl"></span>
+            <span class="target-corner target-corner--br"></span>
+            <div class="helmet-tiles-grid" id="helmet-tiles-grid" aria-hidden="true"></div>
+          </section>
         </section>
       </div>
     `;
@@ -1559,11 +1951,160 @@ function renderControls(controlType) {
     const imagePreviewEl = targets.querySelector("#helmet-image-preview");
     const sendTextEl = targets.querySelector("#helmet-send-text");
     const sendImageEl = targets.querySelector("#helmet-send-image");
+    const sendPopupTextEl = targets.querySelector("#helmet-send-popup-text");
+    const sendPopupTextConfirmEl = targets.querySelector("#helmet-send-popup-text-confirm");
+    const sendPopupTextCancelEl = targets.querySelector("#helmet-send-popup-text-cancel");
+    const sendPopupTextConsentEl = targets.querySelector("#helmet-send-popup-text-consent");
+    const sendPopupImageEl = targets.querySelector("#helmet-send-popup-image");
+    const sendPopupImageConfirmEl = targets.querySelector("#helmet-send-popup-image-confirm");
+    const sendPopupImageCancelEl = targets.querySelector("#helmet-send-popup-image-cancel");
+    const sendPopupImageConsentEl = targets.querySelector("#helmet-send-popup-image-consent");
+    const removePopupImageEl = targets.querySelector("#helmet-remove-popup-image");
+    const removePopupImageConfirmEl = targets.querySelector("#helmet-remove-popup-image-confirm");
+    const removePopupImageCancelEl = targets.querySelector("#helmet-remove-popup-image-cancel");
     const removeTextEl = targets.querySelector("#helmet-remove-text");
     const removeImageEl = targets.querySelector("#helmet-remove-image");
     const descriptionBoxEl = targets.querySelector(".target-btn--description");
     const uploadBoxEl = targets.querySelector(".target-btn--upload");
+    const galleryTilesGridEl = targets.querySelector("#helmet-tiles-grid");
     let previewUrl = "";
+    let galleryTilesData = [{
+      src: "./assets/images/alex.png",
+      assetKey: "alex",
+      likeCount: 0,
+      likedByViewer: false,
+      isAlex: true
+    }];
+
+    const syncGalleryTiles = () => {
+      if (!(galleryTilesGridEl instanceof HTMLElement)) {
+        return;
+      }
+      const cols = 4;
+      const computed = window.getComputedStyle(galleryTilesGridEl);
+      const gap = Number.parseFloat(computed.columnGap || computed.gap || "0") || 0;
+      const gridWidth = galleryTilesGridEl.clientWidth;
+      const gridHeight = galleryTilesGridEl.clientHeight;
+      if (gridWidth <= 0 || gridHeight <= 0) {
+        return;
+      }
+      const tileWidth = (gridWidth - (gap * (cols - 1))) / cols;
+      if (tileWidth <= 0) {
+        return;
+      }
+      const tileHeight = tileWidth * (14 / 9);
+      const rows = Math.max(1, Math.floor((gridHeight + gap) / (tileHeight + gap)));
+      const nextCount = rows * cols;
+      const renderSignature = `${nextCount}:${galleryTilesData.map((item) => `${item.src}|${item.likeCount}|${item.likedByViewer ? 1 : 0}`).join("#")}`;
+      if (galleryTilesGridEl.dataset.renderSignature === renderSignature) {
+        return;
+      }
+      galleryTilesGridEl.dataset.renderSignature = renderSignature;
+      galleryTilesGridEl.replaceChildren();
+      const fragment = document.createDocumentFragment();
+      for (let index = 0; index < nextCount; index += 1) {
+        const tileData = galleryTilesData[index] || null;
+        if (!tileData || !tileData.src) {
+          const emptyTile = document.createElement("span");
+          emptyTile.className = "helmet-tile";
+          fragment.append(emptyTile);
+          continue;
+        }
+        const tileButton = document.createElement("button");
+        tileButton.className = "helmet-tile helmet-tile--clickable";
+        tileButton.type = "button";
+        tileButton.dataset.gallerySrc = tileData.src;
+        tileButton.dataset.galleryAssetKey = tileData.assetKey || "";
+        tileButton.dataset.galleryLikeCount = String(Number.isFinite(tileData.likeCount) ? tileData.likeCount : 0);
+        tileButton.dataset.galleryLiked = tileData.likedByViewer ? "1" : "0";
+        if (tileData.isAlex) {
+          tileButton.dataset.galleryAlex = "1";
+        }
+        tileButton.setAttribute("aria-label", "Apri anteprima immagine");
+        const tileImage = document.createElement("img");
+        tileImage.className = "helmet-tile-image";
+        tileImage.src = tileData.src;
+        tileImage.alt = "";
+        tileImage.loading = "lazy";
+        tileImage.decoding = "async";
+        tileButton.append(tileImage);
+        fragment.append(tileButton);
+      }
+      galleryTilesGridEl.append(fragment);
+    };
+
+    window.requestAnimationFrame(syncGalleryTiles);
+    window.setTimeout(syncGalleryTiles, 90);
+    if (galleryTilesGridEl instanceof HTMLElement && typeof ResizeObserver !== "undefined") {
+      let galleryTilesObserver = null;
+      galleryTilesObserver = new ResizeObserver(() => {
+        if (!galleryTilesGridEl.isConnected) {
+          if (galleryTilesObserver) {
+            galleryTilesObserver.disconnect();
+          }
+          return;
+        }
+        syncGalleryTiles();
+      });
+      galleryTilesObserver.observe(galleryTilesGridEl);
+    }
+    if (galleryTilesGridEl instanceof HTMLElement) {
+      galleryTilesGridEl.addEventListener("click", (event) => {
+        const target = event.target instanceof Element ? event.target : null;
+        const tileButton = target ? target.closest(".helmet-tile--clickable") : null;
+        if (!(tileButton instanceof HTMLButtonElement)) {
+          return;
+        }
+        const src = tileButton.dataset.gallerySrc || "";
+        if (!src) {
+          return;
+        }
+        const likeCount = Number.parseInt(tileButton.dataset.galleryLikeCount || "0", 10) || 0;
+        const likedByViewer = tileButton.dataset.galleryLiked === "1";
+        const assetKey = tileButton.dataset.galleryAssetKey || "";
+        openGalleryPreview(src, tileButton.dataset.galleryAlex === "1", assetKey, likeCount, likedByViewer);
+      });
+    }
+    void fetchApprovedGalleryImages().then((approvedItems) => {
+      galleryTilesData = approvedItems;
+      syncGalleryTiles();
+    });
+
+    const openHelmetSendPopup = (popupEl, focusEl) => {
+      if (!(popupEl instanceof HTMLElement)) {
+        return;
+      }
+      if (popupEl === sendPopupTextEl && sendPopupTextConsentEl instanceof HTMLInputElement) {
+        sendPopupTextConsentEl.checked = false;
+      }
+      if (popupEl === sendPopupImageEl && sendPopupImageConsentEl instanceof HTMLInputElement) {
+        sendPopupImageConsentEl.checked = false;
+      }
+      popupEl.setAttribute("aria-hidden", "false");
+      window.requestAnimationFrame(() => {
+        popupEl.classList.add("is-open");
+        if (focusEl instanceof HTMLElement) {
+          focusEl.focus();
+        }
+      });
+    };
+
+    const closeHelmetSendPopup = (popupEl, returnFocusEl) => {
+      if (!(popupEl instanceof HTMLElement)) {
+        return;
+      }
+      popupEl.classList.remove("is-open");
+      popupEl.setAttribute("aria-hidden", "true");
+      if (popupEl === sendPopupImageEl && sendPopupImageConsentEl instanceof HTMLInputElement) {
+        sendPopupImageConsentEl.checked = false;
+      }
+      if (popupEl === sendPopupTextEl && sendPopupTextConsentEl instanceof HTMLInputElement) {
+        sendPopupTextConsentEl.checked = false;
+      }
+      if (returnFocusEl instanceof HTMLElement) {
+        returnFocusEl.focus();
+      }
+    };
 
     const applyLockedState = (contributionBundle) => {
       if (contributionBundle && typeof contributionBundle === "object") {
@@ -1659,8 +2200,66 @@ function renderControls(controlType) {
       fileInputEl.addEventListener("change", refreshPreview);
     }
 
+    const performHelmetTextSubmit = async () => {
+      if (!(descriptionEl instanceof HTMLTextAreaElement) || !(sendTextEl instanceof HTMLButtonElement)) {
+        return;
+      }
+      if (lockedContribution && lockedContribution.text) {
+        showUploadToast("Descrizione gia inviata da questo dispositivo.", "error");
+        return;
+      }
+      const description = descriptionEl.value.trim();
+      if (!description) {
+        showUploadToast("Scrivi una descrizione prima di inviare.", "error");
+        return;
+      }
+      if (!(sendPopupTextConsentEl instanceof HTMLInputElement) || !sendPopupTextConsentEl.checked) {
+        showUploadToast("Devi accettare la privacy prima di inviare.", "error");
+        return;
+      }
+
+      sendTextEl.disabled = true;
+      descriptionEl.disabled = true;
+      if (sendPopupTextConfirmEl instanceof HTMLButtonElement) {
+        sendPopupTextConfirmEl.disabled = true;
+      }
+
+      try {
+        const deviceCode = persistedDeviceCode || (await ensureDeviceCode());
+        if (!deviceCode) {
+          showUploadToast("Impossibile registrare il dispositivo. Riprova.", "error");
+          return;
+        }
+        await submitHelmetContribution({
+          deviceCode,
+          description
+        });
+        applyLockedState({
+          text: {
+            description
+          },
+          image: null
+        });
+        showUploadToast("Descrizione inviata correttamente.", "success");
+        if (sendPopupTextEl instanceof HTMLElement) {
+          closeHelmetSendPopup(sendPopupTextEl, sendTextEl);
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Invio non riuscito.";
+        showUploadToast(message, "error");
+      } finally {
+        if (!(lockedContribution && lockedContribution.text)) {
+          sendTextEl.disabled = false;
+          descriptionEl.disabled = false;
+        }
+        if (sendPopupTextConfirmEl instanceof HTMLButtonElement) {
+          sendPopupTextConfirmEl.disabled = false;
+        }
+      }
+    };
+
     if (sendTextEl instanceof HTMLButtonElement && descriptionEl instanceof HTMLTextAreaElement) {
-      sendTextEl.addEventListener("click", async (event) => {
+      sendTextEl.addEventListener("click", (event) => {
         event.preventDefault();
         event.stopPropagation();
         if (lockedContribution && lockedContribution.text) {
@@ -1672,36 +2271,25 @@ function renderControls(controlType) {
           showUploadToast("Scrivi una descrizione prima di inviare.", "error");
           return;
         }
-
-        sendTextEl.disabled = true;
-        descriptionEl.disabled = true;
-
-        try {
-          const deviceCode = persistedDeviceCode || (await ensureDeviceCode());
-          if (!deviceCode) {
-            showUploadToast("Impossibile registrare il dispositivo. Riprova.", "error");
-            return;
-          }
-          await submitHelmetContribution({
-            deviceCode,
-            description
-          });
-          applyLockedState({
-            text: {
-              description
-            },
-            image: null
-          });
-          showUploadToast("Descrizione inviata correttamente.", "success");
-        } catch (error) {
-          const message = error instanceof Error ? error.message : "Invio non riuscito.";
-          showUploadToast(message, "error");
-        } finally {
-          if (!(lockedContribution && lockedContribution.text)) {
-            sendTextEl.disabled = false;
-            descriptionEl.disabled = false;
-          }
+        if (sendPopupTextEl instanceof HTMLElement) {
+          openHelmetSendPopup(sendPopupTextEl, sendPopupTextConfirmEl);
         }
+      });
+    }
+
+    if (sendPopupTextCancelEl instanceof HTMLButtonElement && sendPopupTextEl instanceof HTMLElement) {
+      sendPopupTextCancelEl.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeHelmetSendPopup(sendPopupTextEl, sendTextEl);
+      });
+    }
+
+    if (sendPopupTextConfirmEl instanceof HTMLButtonElement) {
+      sendPopupTextConfirmEl.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        void performHelmetTextSubmit();
       });
     }
 
@@ -1733,12 +2321,80 @@ function renderControls(controlType) {
       });
     }
 
+    const performHelmetImageSubmit = async () => {
+      if (
+        !(sendImageEl instanceof HTMLButtonElement) ||
+        !(fileInputEl instanceof HTMLInputElement) ||
+        !(imagePreviewEl instanceof HTMLImageElement)
+      ) {
+        return;
+      }
+      if (lockedContribution && lockedContribution.image) {
+        showUploadToast("Foto gia inviata da questo dispositivo.", "error");
+        return;
+      }
+      const file = fileInputEl.files && fileInputEl.files[0] ? fileInputEl.files[0] : null;
+      const fileError = validateHelmetUploadFile(file);
+      if (!file) {
+        showUploadToast("Seleziona una foto prima di inviare.", "error");
+        return;
+      }
+      if (fileError) {
+        showUploadToast(fileError, "error");
+        return;
+      }
+      if (!(sendPopupImageConsentEl instanceof HTMLInputElement) || !sendPopupImageConsentEl.checked) {
+        showUploadToast("Devi accettare la privacy prima di inviare.", "error");
+        return;
+      }
+
+      sendImageEl.disabled = true;
+      fileInputEl.disabled = true;
+      if (sendPopupImageConfirmEl instanceof HTMLButtonElement) {
+        sendPopupImageConfirmEl.disabled = true;
+      }
+
+      try {
+        const deviceCode = persistedDeviceCode || (await ensureDeviceCode());
+        if (!deviceCode) {
+          showUploadToast("Impossibile registrare il dispositivo. Riprova.", "error");
+          return;
+        }
+        await submitHelmetContribution({
+          deviceCode,
+          imageFile: file
+        });
+        applyLockedState({
+          text: null,
+          image: {
+            imagePath: "",
+            previewUrl: imagePreviewEl.src || ""
+          }
+        });
+        showUploadToast("Foto inviata correttamente.", "success");
+        if (sendPopupImageEl instanceof HTMLElement) {
+          closeHelmetSendPopup(sendPopupImageEl, sendImageEl);
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Invio non riuscito.";
+        showUploadToast(message, "error");
+      } finally {
+        if (!(lockedContribution && lockedContribution.image)) {
+          sendImageEl.disabled = false;
+          fileInputEl.disabled = false;
+        }
+        if (sendPopupImageConfirmEl instanceof HTMLButtonElement) {
+          sendPopupImageConfirmEl.disabled = false;
+        }
+      }
+    };
+
     if (
       sendImageEl instanceof HTMLButtonElement &&
       fileInputEl instanceof HTMLInputElement &&
       imagePreviewEl instanceof HTMLImageElement
     ) {
-      sendImageEl.addEventListener("click", async (event) => {
+      sendImageEl.addEventListener("click", (event) => {
         event.preventDefault();
         event.stopPropagation();
         if (lockedContribution && lockedContribution.image) {
@@ -1755,65 +2411,90 @@ function renderControls(controlType) {
           showUploadToast(fileError, "error");
           return;
         }
-
-        sendImageEl.disabled = true;
-        fileInputEl.disabled = true;
-
-        try {
-          const deviceCode = persistedDeviceCode || (await ensureDeviceCode());
-          if (!deviceCode) {
-            showUploadToast("Impossibile registrare il dispositivo. Riprova.", "error");
-            return;
-          }
-          await submitHelmetContribution({
-            deviceCode,
-            imageFile: file
-          });
-          applyLockedState({
-            text: null,
-            image: {
-              imagePath: "",
-              previewUrl: imagePreviewEl.src || ""
-            }
-          });
-          showUploadToast("Foto inviata correttamente.", "success");
-        } catch (error) {
-          const message = error instanceof Error ? error.message : "Invio non riuscito.";
-          showUploadToast(message, "error");
-        } finally {
-          if (!(lockedContribution && lockedContribution.image)) {
-            sendImageEl.disabled = false;
-            fileInputEl.disabled = false;
-          }
+        if (sendPopupImageEl instanceof HTMLElement) {
+          openHelmetSendPopup(sendPopupImageEl, sendPopupImageConfirmEl);
         }
       });
     }
 
+    if (sendPopupImageCancelEl instanceof HTMLButtonElement && sendPopupImageEl instanceof HTMLElement) {
+      sendPopupImageCancelEl.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeHelmetSendPopup(sendPopupImageEl, sendImageEl);
+      });
+    }
+
+    if (sendPopupImageConfirmEl instanceof HTMLButtonElement) {
+      sendPopupImageConfirmEl.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        void performHelmetImageSubmit();
+      });
+    }
+
+    const performHelmetImageDelete = async () => {
+      if (!(removeImageEl instanceof HTMLButtonElement)) {
+        return;
+      }
+      if (!(lockedContribution && lockedContribution.image)) {
+        return;
+      }
+      removeImageEl.disabled = true;
+      if (removePopupImageConfirmEl instanceof HTMLButtonElement) {
+        removePopupImageConfirmEl.disabled = true;
+      }
+      try {
+        const deviceCode = persistedDeviceCode || (await ensureDeviceCode());
+        if (!deviceCode) {
+          showUploadToast("Impossibile identificare il dispositivo.", "error");
+          return;
+        }
+        await deleteDeviceSubmission(deviceCode, "image");
+        applyLockedState({
+          image: null
+        });
+        showUploadToast("Foto precedente eliminata.", "success");
+        if (removePopupImageEl instanceof HTMLElement) {
+          closeHelmetSendPopup(removePopupImageEl, removeImageEl);
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Eliminazione non riuscita.";
+        showUploadToast(message, "error");
+      } finally {
+        removeImageEl.disabled = false;
+        if (removePopupImageConfirmEl instanceof HTMLButtonElement) {
+          removePopupImageConfirmEl.disabled = false;
+        }
+      }
+    };
+
     if (removeImageEl instanceof HTMLButtonElement) {
-      removeImageEl.addEventListener("click", async (event) => {
+      removeImageEl.addEventListener("click", (event) => {
         event.preventDefault();
         event.stopPropagation();
         if (!(lockedContribution && lockedContribution.image)) {
           return;
         }
-        removeImageEl.disabled = true;
-        try {
-          const deviceCode = persistedDeviceCode || (await ensureDeviceCode());
-          if (!deviceCode) {
-            showUploadToast("Impossibile identificare il dispositivo.", "error");
-            return;
-          }
-          await deleteDeviceSubmission(deviceCode, "image");
-          applyLockedState({
-            image: null
-          });
-          showUploadToast("Foto precedente eliminata.", "success");
-        } catch (error) {
-          const message = error instanceof Error ? error.message : "Eliminazione non riuscita.";
-          showUploadToast(message, "error");
-        } finally {
-          removeImageEl.disabled = false;
+        if (removePopupImageEl instanceof HTMLElement) {
+          openHelmetSendPopup(removePopupImageEl, removePopupImageConfirmEl);
         }
+      });
+    }
+
+    if (removePopupImageCancelEl instanceof HTMLButtonElement && removePopupImageEl instanceof HTMLElement) {
+      removePopupImageCancelEl.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeHelmetSendPopup(removePopupImageEl, removeImageEl);
+      });
+    }
+
+    if (removePopupImageConfirmEl instanceof HTMLButtonElement) {
+      removePopupImageConfirmEl.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        void performHelmetImageDelete();
       });
     }
 
