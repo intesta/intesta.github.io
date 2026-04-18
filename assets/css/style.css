@@ -574,13 +574,16 @@ body {
 
 .targets-screen--gallery {
   align-content: stretch;
-  padding: 40px;
+  min-height: 100svh;
+  padding: var(--targets-vpad) 0;
+  overflow: hidden;
 }
 
 .target-btn--gallery {
   width: min(100%, var(--target-square));
   max-width: 100%;
-  min-height: calc(100svh - (var(--targets-vpad) * 2));
+  height: calc(100svh - (var(--targets-vpad) * 2));
+  min-height: 0;
   aspect-ratio: auto;
   align-items: stretch;
   align-content: stretch;

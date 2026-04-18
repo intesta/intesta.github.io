@@ -1771,7 +1771,7 @@ function renderControls(controlType) {
                 aria-label="Descrizione casco"
               ></textarea>
               <button class="helmet-send-btn helmet-send-btn--text" id="helmet-send-text" type="button" aria-label="Invia descrizione">
-                <img class="helmet-send-icon" src="./assets/images/send.svg" alt="" aria-hidden="true" />
+                <img class="helmet-send-icon" src="./assets/images/send-light.svg" alt="" aria-hidden="true" />
               </button>
               <div
                 class="helmet-send-popup"
@@ -1821,7 +1821,7 @@ function renderControls(controlType) {
                 <img class="helmet-remove-icon" src="./assets/images/close_popup.svg" alt="" aria-hidden="true" />
               </button>
               <button class="helmet-send-btn helmet-send-btn--image" id="helmet-send-image" type="button" aria-label="Invia foto">
-                <img class="helmet-send-icon" src="./assets/images/send.svg" alt="" aria-hidden="true" />
+                <img class="helmet-send-icon" src="./assets/images/send-light.svg" alt="" aria-hidden="true" />
               </button>
               <div
                 class="helmet-send-popup"
@@ -1963,6 +1963,9 @@ function renderControls(controlType) {
     const removeImageEl = targets.querySelector("#helmet-remove-image");
     const descriptionBoxEl = targets.querySelector(".target-btn--description");
     const uploadBoxEl = targets.querySelector(".target-btn--upload");
+    const sendImageIconEl = sendImageEl instanceof HTMLButtonElement
+      ? sendImageEl.querySelector(".helmet-send-icon")
+      : null;
     const galleryTilesGridEl = targets.querySelector("#helmet-tiles-grid");
     let previewUrl = "";
     let galleryTilesData = [{
@@ -1981,6 +1984,15 @@ function renderControls(controlType) {
       window.requestAnimationFrame(() => {
         targetEl.classList.add("is-corners-thick");
       });
+    };
+
+    const syncImageSendIconVariant = (hasPreviewImage) => {
+      if (!(sendImageIconEl instanceof HTMLImageElement)) {
+        return;
+      }
+      sendImageIconEl.src = hasPreviewImage
+        ? "./assets/images/send.svg"
+        : "./assets/images/send-light.svg";
     };
 
     const syncGalleryTiles = () => {
@@ -2188,12 +2200,14 @@ function renderControls(controlType) {
           imagePreviewEl.src = imageUrl;
           imagePreviewEl.classList.remove("is-hidden");
         }
+        syncImageSendIconVariant(false);
       } else if (!hasImageLock && imagePreviewEl instanceof HTMLImageElement) {
         imagePreviewEl.src = "";
         imagePreviewEl.classList.add("is-hidden");
         if (fileInputEl instanceof HTMLInputElement) {
           fileInputEl.value = "";
         }
+        syncImageSendIconVariant(false);
       }
     };
 
@@ -2209,6 +2223,7 @@ function renderControls(controlType) {
       if (!file) {
         imagePreviewEl.src = "";
         imagePreviewEl.classList.add("is-hidden");
+        syncImageSendIconVariant(false);
         return;
       }
       const validationError = validateHelmetUploadFile(file);
@@ -2217,11 +2232,13 @@ function renderControls(controlType) {
         imagePreviewEl.src = "";
         imagePreviewEl.classList.add("is-hidden");
         showUploadToast(validationError, "error");
+        syncImageSendIconVariant(false);
         return;
       }
       previewUrl = URL.createObjectURL(file);
       imagePreviewEl.src = previewUrl;
       imagePreviewEl.classList.remove("is-hidden");
+      syncImageSendIconVariant(true);
     };
 
     if (fileInputEl instanceof HTMLInputElement) {
