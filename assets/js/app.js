@@ -1755,7 +1755,7 @@ function renderControls(controlType) {
           </button>
         </section>
 
-        <section class="targets-screen targets-screen--pair">
+        <section class="targets-screen targets-screen--pair" id="targets-upload">
           <div class="helmet-upload-form" id="helmet-upload-form">
             <label class="target-btn target-btn--input target-btn--description" for="helmet-description">
               <span class="target-corner target-corner--tl"></span>
@@ -1770,9 +1770,6 @@ function renderControls(controlType) {
                 placeholder="descrivi il casco che desideri&#10;..."
                 aria-label="Descrizione casco"
               ></textarea>
-              <button class="helmet-remove-btn helmet-remove-btn--text is-hidden" id="helmet-remove-text" type="button" aria-label="Elimina descrizione precedente">
-                Elimina
-              </button>
               <button class="helmet-send-btn helmet-send-btn--text" id="helmet-send-text" type="button" aria-label="Invia descrizione">
                 <img class="helmet-send-icon" src="./assets/images/send.svg" alt="" aria-hidden="true" />
               </button>
@@ -1821,7 +1818,7 @@ function renderControls(controlType) {
               <p class="helmet-upload-copy">carica foto del casco che desideri</p>
               <img class="helmet-upload-preview is-hidden" id="helmet-image-preview" alt="Anteprima immagine casco caricata" />
               <button class="helmet-remove-btn helmet-remove-btn--image is-hidden" id="helmet-remove-image" type="button" aria-label="Elimina foto precedente">
-                Elimina
+                <i class="feather-x-square helmet-remove-icon" aria-hidden="true"></i>
               </button>
               <button class="helmet-send-btn helmet-send-btn--image" id="helmet-send-image" type="button" aria-label="Invia foto">
                 <img class="helmet-send-icon" src="./assets/images/send.svg" alt="" aria-hidden="true" />
@@ -1906,6 +1903,7 @@ function renderControls(controlType) {
     const helmetTarget = targets.querySelector(".target-btn--helmet");
     const targetsJumpButton = targets.querySelector("#targets-jump-btn");
     const targetsLower = targets.querySelector("#targets-lower");
+    const targetsUpload = targets.querySelector("#targets-upload");
     const activateTargetsArea = () => {
       if (!hasTargetsScrolledDown) {
         hasTargetsScrolledDown = true;
@@ -1962,7 +1960,6 @@ function renderControls(controlType) {
     const removePopupImageEl = targets.querySelector("#helmet-remove-popup-image");
     const removePopupImageConfirmEl = targets.querySelector("#helmet-remove-popup-image-confirm");
     const removePopupImageCancelEl = targets.querySelector("#helmet-remove-popup-image-cancel");
-    const removeTextEl = targets.querySelector("#helmet-remove-text");
     const removeImageEl = targets.querySelector("#helmet-remove-image");
     const descriptionBoxEl = targets.querySelector(".target-btn--description");
     const uploadBoxEl = targets.querySelector(".target-btn--upload");
@@ -2002,12 +1999,23 @@ function renderControls(controlType) {
       galleryTilesGridEl.dataset.renderSignature = renderSignature;
       galleryTilesGridEl.replaceChildren();
       const fragment = document.createDocumentFragment();
+      let addTilePlaced = false;
       for (let index = 0; index < nextCount; index += 1) {
         const tileData = galleryTilesData[index] || null;
         if (!tileData || !tileData.src) {
-          const emptyTile = document.createElement("span");
-          emptyTile.className = "helmet-tile";
-          fragment.append(emptyTile);
+          if (!addTilePlaced) {
+            const addTile = document.createElement("button");
+            addTile.className = "helmet-tile helmet-tile--add";
+            addTile.type = "button";
+            addTile.setAttribute("aria-label", "Aggiungi il tuo casco");
+            addTile.innerHTML = '<span class="helmet-tile-plus" aria-hidden="true">+</span>';
+            fragment.append(addTile);
+            addTilePlaced = true;
+          } else {
+            const emptyTile = document.createElement("span");
+            emptyTile.className = "helmet-tile";
+            fragment.append(emptyTile);
+          }
           continue;
         }
         const tileButton = document.createElement("button");
@@ -2051,6 +2059,18 @@ function renderControls(controlType) {
     if (galleryTilesGridEl instanceof HTMLElement) {
       galleryTilesGridEl.addEventListener("click", (event) => {
         const target = event.target instanceof Element ? event.target : null;
+        const addTile = target ? target.closest(".helmet-tile--add") : null;
+        if (addTile instanceof HTMLButtonElement) {
+          activateTargetsArea();
+          const uploadTop = targetsUpload instanceof HTMLElement
+            ? targetsUpload.offsetTop
+            : controlsEl.clientHeight;
+          controlsEl.scrollTo({
+            top: uploadTop,
+            behavior: "smooth"
+          });
+          return;
+        }
         const tileButton = target ? target.closest(".helmet-tile--clickable") : null;
         if (!(tileButton instanceof HTMLButtonElement)) {
           return;
@@ -2117,26 +2137,22 @@ function renderControls(controlType) {
       }
       const hasTextLock = Boolean(lockedContribution && lockedContribution.text);
       const hasImageLock = Boolean(lockedContribution && lockedContribution.image);
-      isDeviceLocked = hasTextLock && hasImageLock;
+      isDeviceLocked = hasImageLock;
 
       if (descriptionEl instanceof HTMLTextAreaElement) {
-        descriptionEl.disabled = hasTextLock;
-        descriptionEl.readOnly = hasTextLock;
+        descriptionEl.disabled = false;
+        descriptionEl.readOnly = false;
       }
       if (sendTextEl instanceof HTMLButtonElement) {
-        sendTextEl.disabled = hasTextLock;
-        sendTextEl.classList.toggle("is-hidden", hasTextLock);
-      }
-      if (removeTextEl instanceof HTMLButtonElement) {
-        removeTextEl.disabled = !hasTextLock;
-        removeTextEl.classList.toggle("is-hidden", !hasTextLock);
+        sendTextEl.disabled = false;
+        sendTextEl.classList.remove("is-hidden");
       }
       if (descriptionBoxEl instanceof HTMLElement) {
-        descriptionBoxEl.classList.toggle("is-text-locked", hasTextLock);
+        descriptionBoxEl.classList.remove("is-text-locked");
       }
-      if (hasTextLock && descriptionEl instanceof HTMLTextAreaElement) {
+      if (lockedContribution && lockedContribution.text && descriptionEl instanceof HTMLTextAreaElement) {
         descriptionEl.value = lockedContribution.text.description || "";
-      } else if (!hasTextLock && descriptionEl instanceof HTMLTextAreaElement) {
+      } else if (descriptionEl instanceof HTMLTextAreaElement) {
         descriptionEl.value = "";
       }
 
@@ -2204,10 +2220,6 @@ function renderControls(controlType) {
       if (!(descriptionEl instanceof HTMLTextAreaElement) || !(sendTextEl instanceof HTMLButtonElement)) {
         return;
       }
-      if (lockedContribution && lockedContribution.text) {
-        showUploadToast("Descrizione gia inviata da questo dispositivo.", "error");
-        return;
-      }
       const description = descriptionEl.value.trim();
       if (!description) {
         showUploadToast("Scrivi una descrizione prima di inviare.", "error");
@@ -2237,8 +2249,7 @@ function renderControls(controlType) {
         applyLockedState({
           text: {
             description
-          },
-          image: null
+          }
         });
         showUploadToast("Descrizione inviata correttamente.", "success");
         if (sendPopupTextEl instanceof HTMLElement) {
@@ -2248,10 +2259,8 @@ function renderControls(controlType) {
         const message = error instanceof Error ? error.message : "Invio non riuscito.";
         showUploadToast(message, "error");
       } finally {
-        if (!(lockedContribution && lockedContribution.text)) {
-          sendTextEl.disabled = false;
-          descriptionEl.disabled = false;
-        }
+        sendTextEl.disabled = false;
+        descriptionEl.disabled = false;
         if (sendPopupTextConfirmEl instanceof HTMLButtonElement) {
           sendPopupTextConfirmEl.disabled = false;
         }
@@ -2262,10 +2271,6 @@ function renderControls(controlType) {
       sendTextEl.addEventListener("click", (event) => {
         event.preventDefault();
         event.stopPropagation();
-        if (lockedContribution && lockedContribution.text) {
-          showUploadToast("Descrizione gia inviata da questo dispositivo.", "error");
-          return;
-        }
         const description = descriptionEl.value.trim();
         if (!description) {
           showUploadToast("Scrivi una descrizione prima di inviare.", "error");
@@ -2290,34 +2295,6 @@ function renderControls(controlType) {
         event.preventDefault();
         event.stopPropagation();
         void performHelmetTextSubmit();
-      });
-    }
-
-    if (removeTextEl instanceof HTMLButtonElement) {
-      removeTextEl.addEventListener("click", async (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        if (!(lockedContribution && lockedContribution.text)) {
-          return;
-        }
-        removeTextEl.disabled = true;
-        try {
-          const deviceCode = persistedDeviceCode || (await ensureDeviceCode());
-          if (!deviceCode) {
-            showUploadToast("Impossibile identificare il dispositivo.", "error");
-            return;
-          }
-          await deleteDeviceSubmission(deviceCode, "text");
-          applyLockedState({
-            text: null
-          });
-          showUploadToast("Descrizione precedente eliminata.", "success");
-        } catch (error) {
-          const message = error instanceof Error ? error.message : "Eliminazione non riuscita.";
-          showUploadToast(message, "error");
-        } finally {
-          removeTextEl.disabled = false;
-        }
       });
     }
 
@@ -2365,7 +2342,6 @@ function renderControls(controlType) {
           imageFile: file
         });
         applyLockedState({
-          text: null,
           image: {
             imagePath: "",
             previewUrl: imagePreviewEl.src || ""
