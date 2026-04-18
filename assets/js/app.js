@@ -473,7 +473,6 @@ app.innerHTML = `
     </button>
     <div class="profile-popup-body">
       <article class="profile-card" aria-label="Profilo di Tomas Berardi">
-        <p class="profile-name">&nbsp;&nbsp;Tomas._.Berardi</p>
         <div class="profile-photo-frame" aria-hidden="true">
           <span class="photo-corner photo-corner--tl"></span>
           <span class="photo-corner photo-corner--tr"></span>
@@ -482,7 +481,7 @@ app.innerHTML = `
           <img class="profile-photo" src="./assets/images/tomas.png" alt="Ritratto di Tomas Berardi" />
         </div>
         <p class="profile-bio">
-            <b>21 y.o.<br><br>Faenza<br><br>Studente ISIA</b>: università di Design del prodotto e della comunicazione.<br><br>Ho bisogno del tuo aiuto per il mio progetto di tesi.<br>Ho realizzato questo sito e attività per te!
+            <b>@tomas._.berardi<br><br>21 y.o. Faenza<br><br>Studente ISIA</b>: università di Design del prodotto e della comunicazione.<br><br>Ho bisogno del tuo aiuto per il mio progetto di tesi.<br>Ho realizzato questo sito e attività per te!
         </p>
         <p class="profile-contact">
           Per maggiori informazioni conttatami.<br>
@@ -549,6 +548,7 @@ const galleryPreviewCloseEl = app.querySelector("#gallery-preview-close");
 const galleryPreviewImageEl = app.querySelector("#gallery-preview-image");
 const galleryPreviewCaptionEl = app.querySelector("#gallery-preview-caption");
 const galleryLikeBtnEl = app.querySelector("#gallery-like-btn");
+const galleryLikeIconEl = app.querySelector(".gallery-like-icon");
 const galleryLikeCountEl = app.querySelector("#gallery-like-count");
 const chatRootEl = app.querySelector("#ai-chat");
 const chatLauncherEl = app.querySelector("#ai-chat-launcher");
@@ -664,6 +664,11 @@ function syncGalleryLikeUi() {
   }
   galleryLikeCountEl.textContent = `${Math.max(0, currentGalleryLikeCount)} Like`;
   galleryLikeBtnEl.classList.toggle("is-liked", currentGalleryLikedByViewer);
+  if (galleryLikeIconEl instanceof HTMLImageElement) {
+    galleryLikeIconEl.src = currentGalleryLikedByViewer
+      ? "./assets/images/like.png"
+      : "./assets/images/empty-like.svg";
+  }
 }
 
 function openGalleryPreview(imageSrc, showAlexCaption = false, assetKey = "", likeCount = 0, likedByViewer = false) {
@@ -684,7 +689,7 @@ function openGalleryPreview(imageSrc, showAlexCaption = false, assetKey = "", li
   }
   syncGalleryLikeUi();
   galleryPreviewCaptionEl.hidden = !showAlexCaption;
-  galleryPreviewCaptionEl.innerHTML = showAlexCaption ? "<b>@alex.timoncini<br><br>Brisighella<br><br>Full-Stack Web Developer</b><br><br>+39 393 456 200<br>timoncinidev@gmail.com" : "";
+  galleryPreviewCaptionEl.innerHTML = showAlexCaption ? "<b>@alex.timoncini<br><br>22 y.o. Brisighella<br><br>Full-Stack Web Developer</b><br><br>+39 393 456 200<br>timoncinidev@gmail.com" : "";
   galleryPreviewEl.hidden = false;
   galleryPreviewEl.classList.remove("is-closing");
   window.requestAnimationFrame(() => {
@@ -765,7 +770,6 @@ Vincoli: niente divagazioni su temi non collegati al progetto/sito; niente inven
 
 const popupContent = {
   tomas: `
-    <p class="profile-name">&nbsp;&nbsp;Tomas._.Berardi</p>
     <div class="profile-photo-frame" aria-hidden="true">
       <span class="photo-corner photo-corner--tl"></span>
       <span class="photo-corner photo-corner--tr"></span>
@@ -774,7 +778,7 @@ const popupContent = {
       <img class="profile-photo" src="./assets/images/tomas.png" alt="Ritratto di Tomas Berardi" />
     </div>
     <p class="profile-bio">
-        <b>21 y.o.<br><br>Faenza<br><br>Studente ISIA</b>: università di Design del prodotto e della comunicazione.<br><br>Ho bisogno del tuo aiuto per il mio progetto di tesi.<br>Ho realizzato questo sito e attività per te!
+        <b>@tomas._.berardi<br><br>21 y.o. Faenza<br><br>Studente ISIA</b>: università di Design del prodotto e della comunicazione.<br><br>Ho bisogno del tuo aiuto per il mio progetto di tesi.<br>Ho realizzato questo sito e attività per te!
     </p>
     <p class="profile-contact">
       Per maggiori informazioni conttatami.<br>
