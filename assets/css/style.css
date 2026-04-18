@@ -357,7 +357,7 @@ body {
 .targets-screen--intro {
   align-content: start;
   grid-template-rows: auto 1fr;
-  gap: 18px;
+  gap: 40px;
   padding: var(--targets-vpad) 0;
 }
 
@@ -395,7 +395,7 @@ body {
 }
 
 .targets-logo {
-  width: min(50vw, 140px);
+  width: min(50vw, 175px);
   height: auto;
   display: block;
   object-fit: contain;
@@ -436,7 +436,7 @@ body {
   color: #11151b;
   font-weight: 400;
   position: relative;
-  top: -60px;
+  top: -50px;
 }
 
 .targets-jump-btn {
@@ -456,6 +456,7 @@ body {
 .targets-jump-btn .icon-svg--down {
   width: 52px;
   height: 52px;
+  transform: rotate(180deg);
 }
 
 .targets-jump-btn.is-hidden {
@@ -600,6 +601,10 @@ body {
   background: transparent;
   overflow: hidden;
   padding: 0;
+}
+
+.helmet-tile--clickable[data-gallery-alex="1"] {
+  border-width: 2px;
 }
 
 .helmet-tile-image {
