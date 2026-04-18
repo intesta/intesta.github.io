@@ -503,12 +503,12 @@ app.innerHTML = `
           <i class="feather-x-square gallery-preview-close-icon" aria-hidden="true"></i>
         </button>
         <img class="gallery-preview-image" id="gallery-preview-image" src="" alt="Anteprima lavoro approvato" />
-        <button class="gallery-like-btn" id="gallery-like-btn" type="button" aria-label="Metti mi piace alla foto">
-          <svg class="gallery-like-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 1 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"></path>
-          </svg>
-          <span class="gallery-like-count" id="gallery-like-count">0</span>
-        </button>
+        <div class="gallery-like-row">
+          <button class="gallery-like-btn" id="gallery-like-btn" type="button" aria-label="Metti mi piace alla foto">
+            <img class="gallery-like-icon" src="./assets/images/empty-like.svg" alt="" aria-hidden="true" />
+          </button>
+          <span class="gallery-like-count" id="gallery-like-count">0 Like</span>
+        </div>
       </div>
       <p class="gallery-preview-caption" id="gallery-preview-caption" hidden></p>
     </div>
@@ -665,7 +665,7 @@ function syncGalleryLikeUi() {
   if (!(galleryLikeBtnEl instanceof HTMLButtonElement) || !(galleryLikeCountEl instanceof HTMLElement)) {
     return;
   }
-  galleryLikeCountEl.textContent = String(Math.max(0, currentGalleryLikeCount));
+  galleryLikeCountEl.textContent = `${Math.max(0, currentGalleryLikeCount)} Like`;
   galleryLikeBtnEl.classList.toggle("is-liked", currentGalleryLikedByViewer);
 }
 

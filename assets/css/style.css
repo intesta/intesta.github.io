@@ -707,6 +707,7 @@ body {
   position: relative;
   width: calc(100% - (var(--target-inner-pad) * 2));
   margin: 0 auto;
+  padding-bottom: 52px;
 }
 
 .gallery-preview-image {
@@ -720,8 +721,8 @@ body {
 
 .gallery-like-btn {
   position: absolute;
+  top: 0;
   left: 50%;
-  bottom: 10px;
   transform: translateX(-50%);
   width: 44px;
   height: 44px;
@@ -732,41 +733,36 @@ body {
   display: grid;
   place-items: center;
   cursor: pointer;
-  transition: transform 170ms var(--motion-ease);
+  transition: transform 170ms var(--motion-ease), opacity 170ms var(--motion-ease);
+}
+
+.gallery-like-row {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  width: 100%;
+  height: 44px;
 }
 
 .gallery-like-icon {
   width: 44px;
   height: 44px;
   display: block;
-  fill: transparent;
-  stroke: #000;
-  stroke-width: 1.5;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  transition: fill 180ms var(--motion-ease), transform 180ms var(--motion-ease);
+  object-fit: contain;
 }
 
 .gallery-like-count {
   position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  font-size: 12px;
-  line-height: 12px;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  margin: 0;
+  text-align: right;
+  font-size: 20px;
+  line-height: 1;
   font-weight: 400;
   color: #000;
   pointer-events: none;
-  transition: color 180ms var(--motion-ease);
-}
-
-.gallery-like-btn.is-liked .gallery-like-icon {
-  fill: #000;
-  transform: scale(1.06);
-}
-
-.gallery-like-btn.is-liked .gallery-like-count {
-  color: #fff;
 }
 
 .gallery-like-btn:active {
@@ -1421,8 +1417,8 @@ body {
 }
 
 .ai-chat-launcher {
-  width: 130px;
-  height: 130px;
+  width: 90px;
+  height: 90px;
   border: none;
   border-radius: 0;
   background: transparent;
