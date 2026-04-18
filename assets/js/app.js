@@ -600,7 +600,7 @@ Sito: Intesta (presentazione mobile-first in italiano).
 Autore/progetto: Tomas Berardi, studente ISIA (Design del prodotto e della comunicazione), progetto tesi sul tema dell'utilizzo del casco tra i giovani.
 Obiettivo del sito: coinvolgere utenti giovani, presentare il progetto, invitare a interagire con i contenuti e a contattare il progetto.
 Tono del sito: diretto, semplice, umano, contemporaneo, frasi brevi, senza tecnicismi inutili.
-Contenuti principali: percorso a slide, sezioni profilo/casco, contatti, pagine legali (privacy e cookie).
+Contenuti principali: percorso a slide, sezioni profilo/casco, contatti, pagine legali (privacy, cookie, termini di utilizzo).
 Vincoli: niente divagazioni su temi non collegati al progetto/sito; niente invenzioni di dati, prezzi, policy o funzionalita non presenti.
 `;
 
@@ -645,7 +645,8 @@ const popupContent = {
 
 const legalPopupPages = {
   PR: { href: "./privacy.html", title: "Privacy Policy" },
-  CK: { href: "./cookie.html", title: "Cookie tecnici" }
+  CK: { href: "./cookie.html", title: "Cookie tecnici" },
+  TS: { href: "./termini.html", title: "Termini di utilizzo del servizio" }
 };
 const HELMET_UPLOAD_MAX_BYTES = 15 * 1024 * 1024;
 const HELMET_UPLOAD_ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
@@ -1461,7 +1462,7 @@ function renderControls(controlType) {
                 id="helmet-description"
                 name="description"
                 maxlength="2000"
-                placeholder="descrivi il casco che desideri"
+                placeholder="descrivi il casco che desideri&#10;..."
                 aria-label="Descrizione casco"
               ></textarea>
               <button class="helmet-remove-btn helmet-remove-btn--text is-hidden" id="helmet-remove-text" type="button" aria-label="Elimina descrizione precedente">

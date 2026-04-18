@@ -190,7 +190,7 @@ body {
   -webkit-overflow-scrolling: touch;
   pointer-events: auto;
   padding: 0;
-  padding-bottom: 130px;
+  padding-bottom: 180px;
   scroll-snap-type: y proximity;
 }
 
@@ -344,7 +344,7 @@ body {
   width: 100%;
   min-height: 100svh;
   scroll-snap-align: start;
-  scroll-snap-stop: always;
+  scroll-snap-stop: normal;
   display: grid;
   justify-items: center;
   align-content: center;
@@ -371,6 +371,11 @@ body {
 .targets-screen--pair .target-btn--profile,
 .targets-screen--pair .target-btn--helmet {
   width: min(100%, var(--target-square));
+}
+
+/* Last "slide" sits above the inline footer; snap-to-start here fights max scroll and causes a slight bounce. */
+.targets-layout .targets-screen:last-of-type {
+  scroll-snap-align: none;
 }
 
 .targets-screen--pair .target-btn--profile,
@@ -517,26 +522,31 @@ body {
 .helmet-upload-textarea {
   width: 100%;
   height: auto;
-  min-height: 4.8em;
+  min-height: 10em;
   max-height: calc(100% - 18px);
   align-self: center;
-  padding: 10px 46px;
   border: none;
   background: transparent;
   resize: none;
   outline: none;
+  overflow-y: auto;
   text-align: center;
   font: inherit;
   font-size: clamp(1rem, 3.8vw, 1.1rem);
   line-height: 1.32;
   letter-spacing: -0.02em;
   color: #0f1318;
+  position: relative;
 }
 
 .helmet-upload-textarea::placeholder {
   font-size: 16px;
   font-weight: 700;
+  line-height: 1.32;
   color: rgba(0, 0, 0, 0.51);
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .target-btn--upload {
@@ -914,6 +924,7 @@ body {
   font-size: 14px;
   font-weight: 300;
   line-height: 1.2;
+  white-space: nowrap;
 }
 
 #app.is-popup-open .slider {
@@ -937,8 +948,8 @@ body {
 }
 
 .ai-chat-launcher {
-  width: 76px;
-  height: 76px;
+  width: 100px;
+  height: 100px;
   border: none;
   border-radius: 0;
   background: transparent;
