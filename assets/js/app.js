@@ -1731,7 +1731,7 @@ function renderControls(controlType) {
             <span class="target-corner target-corner--tr"></span>
             <span class="target-corner target-corner--bl"></span>
             <span class="target-corner target-corner--br"></span>
-            <p class="targets-claim">Inventiamoci un casco<br />da bici bellissimo!</p>
+            <p class="targets-claim">Inventiamo un casco<br />da bici bellissimo!</p>
             <button class="targets-jump-btn" id="targets-jump-btn" type="button" aria-label="Scorri ai target profilo e casco">
               <img class="icon-svg icon-svg--down" src="./assets/images/chevrons-down.svg" alt="" aria-hidden="true" />
             </button>

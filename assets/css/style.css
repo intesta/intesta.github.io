@@ -9,8 +9,8 @@
   --site-side: max(0px, calc((100vw - var(--site-max-width)) / 2));
   --targets-gap-base: 40px;
   --targets-vpad-base: 40px;
-  --dot-grid-size: 30px;
-  --dot-radius: 1.7px;
+  --dot-grid-size: 24px;
+  --dot-radius: 2px;
   --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -19,7 +19,7 @@ body {
   min-height: 100svh;
   font-family: "Space Mono", "Courier New", Courier, monospace;
   background-color: #f8f8f8;
-  background-image: radial-gradient(circle, #dadada var(--dot-radius), transparent var(--dot-radius));
+  background-image: radial-gradient(circle, rgb(235,235,235) var(--dot-radius), transparent var(--dot-radius));
   background-size: var(--dot-grid-size) var(--dot-grid-size);
   color: #111317;
   overflow: hidden;
@@ -395,7 +395,7 @@ body {
 }
 
 .targets-logo {
-  width: min(52vw, 190px);
+  width: min(50vw, 140px);
   height: auto;
   display: block;
   object-fit: contain;
@@ -435,6 +435,8 @@ body {
   letter-spacing: -0.02em;
   color: #11151b;
   font-weight: 400;
+  position: relative;
+  top: -60px;
 }
 
 .targets-jump-btn {
@@ -1211,29 +1213,29 @@ body {
 .target-corner--tl {
   top: 0;
   left: 0;
-  border-top: 2px solid #181c21;
-  border-left: 2px solid #181c21;
+  border-top: 1px solid #181c21;
+  border-left: 1px solid #181c21;
 }
 
 .target-corner--tr {
   top: 0;
   right: 0;
-  border-top: 2px solid #181c21;
-  border-right: 2px solid #181c21;
+  border-top: 1px solid #181c21;
+  border-right: 1px solid #181c21;
 }
 
 .target-corner--bl {
   bottom: 0;
   left: 0;
-  border-bottom: 2px solid #181c21;
-  border-left: 2px solid #181c21;
+  border-bottom: 1px solid #181c21;
+  border-left: 1px solid #181c21;
 }
 
 .target-corner--br {
   bottom: 0;
   right: 0;
-  border-bottom: 2px solid #181c21;
-  border-right: 2px solid #181c21;
+  border-bottom: 1px solid #181c21;
+  border-right: 1px solid #181c21;
 }
 
 .choice-btn.is-picked {
