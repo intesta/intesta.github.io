@@ -734,7 +734,7 @@ b{
   max-height: 82svh;
   object-fit: contain;
   display: block;
-  box-shadow: 0 4px 4px 5px rgba(0, 0, 0, 0.25);
+  box-shadow: rgba(0, 0, 0, 0.25) 0px 8px 24px;
   background: #fff;
 }
 
