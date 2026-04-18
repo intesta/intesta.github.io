@@ -1792,10 +1792,10 @@ function renderControls(controlType) {
                   </label>
                   <div class="helmet-send-popup-actions">
                     <button type="button" class="helmet-send-popup-choice helmet-send-popup-choice--cancel" id="helmet-send-popup-text-cancel" aria-label="Annulla invio descrizione">
-                      <i class="feather-x helmet-send-popup-choice-icon"></i>
+                      <img class="helmet-send-popup-choice-icon" src="./assets/images/x.svg" alt="" aria-hidden="true" />
                     </button>
                     <button type="button" class="helmet-send-popup-choice helmet-send-popup-choice--confirm" id="helmet-send-popup-text-confirm" aria-label="Conferma invio descrizione">
-                      <i class="feather-circle helmet-send-popup-choice-icon"></i>
+                      <img class="helmet-send-popup-choice-icon" src="./assets/images/circle.svg" alt="" aria-hidden="true" />
                     </button>
                   </div>
                 </div>
@@ -1842,10 +1842,10 @@ function renderControls(controlType) {
                   </label>
                   <div class="helmet-send-popup-actions">
                     <button type="button" class="helmet-send-popup-choice helmet-send-popup-choice--cancel" id="helmet-send-popup-image-cancel" aria-label="Annulla invio immagine">
-                      <i class="feather-x helmet-send-popup-choice-icon"></i>
+                      <img class="helmet-send-popup-choice-icon" src="./assets/images/x.svg" alt="" aria-hidden="true" />
                     </button>
                     <button type="button" class="helmet-send-popup-choice helmet-send-popup-choice--confirm" id="helmet-send-popup-image-confirm" aria-label="Conferma invio immagine">
-                      <i class="feather-circle helmet-send-popup-choice-icon"></i>
+                      <img class="helmet-send-popup-choice-icon" src="./assets/images/circle.svg" alt="" aria-hidden="true" />
                     </button>
                   </div>
                 </div>
@@ -1865,10 +1865,10 @@ function renderControls(controlType) {
                   <p class="helmet-send-popup-title" id="helmet-remove-popup-image-title">vuoi eliminare l'immagine?</p>
                   <div class="helmet-send-popup-actions">
                     <button type="button" class="helmet-send-popup-choice helmet-send-popup-choice--cancel" id="helmet-remove-popup-image-cancel" aria-label="Annulla eliminazione immagine">
-                      <i class="feather-x helmet-send-popup-choice-icon"></i>
+                      <img class="helmet-send-popup-choice-icon" src="./assets/images/x.svg" alt="" aria-hidden="true" />
                     </button>
                     <button type="button" class="helmet-send-popup-choice helmet-send-popup-choice--confirm" id="helmet-remove-popup-image-confirm" aria-label="Conferma eliminazione immagine">
-                      <i class="feather-circle helmet-send-popup-choice-icon"></i>
+                      <img class="helmet-send-popup-choice-icon" src="./assets/images/circle.svg" alt="" aria-hidden="true" />
                     </button>
                   </div>
                 </div>
