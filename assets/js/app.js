@@ -1,5 +1,53 @@
 "use strict";
 
+const appLoaderEl = document.querySelector("#app-loader");
+let isAppLoaderHidden = false;
+
+function waitForImageLoad(imageEl) {
+  return new Promise((resolve) => {
+    if (!(imageEl instanceof HTMLImageElement) || imageEl.complete) {
+      resolve();
+      return;
+    }
+    const onDone = () => {
+      imageEl.removeEventListener("load", onDone);
+      imageEl.removeEventListener("error", onDone);
+      resolve();
+    };
+    imageEl.addEventListener("load", onDone, { once: true });
+    imageEl.addEventListener("error", onDone, { once: true });
+  });
+}
+
+function hideAppLoader() {
+  if (!(appLoaderEl instanceof HTMLElement) || isAppLoaderHidden) {
+    return;
+  }
+  isAppLoaderHidden = true;
+  appLoaderEl.classList.add("is-hidden");
+  document.body.classList.remove("is-app-loading");
+  window.setTimeout(() => {
+    if (appLoaderEl.isConnected) {
+      appLoaderEl.remove();
+    }
+  }, 260);
+}
+
+async function bootLoader() {
+  if (document.readyState !== "complete") {
+    await new Promise((resolve) => {
+      window.addEventListener("load", resolve, { once: true });
+    });
+  }
+  const images = Array.from(document.querySelectorAll("img"));
+  await Promise.all(images.map((imageEl) => waitForImageLoad(imageEl)));
+  window.requestAnimationFrame(() => {
+    hideAppLoader();
+  });
+}
+
+void bootLoader();
+
 if (window.location.hash === "#/admin") {
   document.body.classList.add("admin-mode");
 
@@ -685,7 +733,7 @@ function openGalleryPreview(imageSrc, showAlexCaption = false, assetKey = "", li
   currentGalleryLikeCount = Number.isFinite(likeCount) ? Math.max(0, Math.floor(likeCount)) : 0;
   currentGalleryLikedByViewer = Boolean(likedByViewer);
   if (galleryLikeBtnEl instanceof HTMLButtonElement) {
-    galleryLikeBtnEl.disabled = !currentGalleryPreviewAssetKey;
+    galleryLikeBtnEl.disabled = false;
   }
   syncGalleryLikeUi();
   galleryPreviewCaptionEl.hidden = !showAlexCaption;
@@ -734,16 +782,19 @@ if (galleryPreviewCloseEl instanceof HTMLButtonElement) {
 }
 if (galleryLikeBtnEl instanceof HTMLButtonElement) {
   galleryLikeBtnEl.addEventListener("click", async () => {
-    if (!currentGalleryPreviewSrc || !currentGalleryPreviewAssetKey) {
+    if (!currentGalleryPreviewSrc) {
       return;
     }
+    const previousLiked = currentGalleryLikedByViewer;
+    const previousLikeCount = currentGalleryLikeCount;
     const nextLiked = !currentGalleryLikedByViewer;
-    galleryLikeBtnEl.disabled = true;
-    try {
-      const payload = await submitGalleryLike(currentGalleryPreviewAssetKey, nextLiked);
-      currentGalleryLikedByViewer = Boolean(payload.likedByViewer);
-      currentGalleryLikeCount = Number.isFinite(payload.likeCount) ? Math.max(0, Math.floor(payload.likeCount)) : currentGalleryLikeCount;
-      syncGalleryLikeUi();
+    currentGalleryLikedByViewer = nextLiked;
+    currentGalleryLikeCount = Math.max(0, previousLikeCount + (nextLiked ? 1 : -1));
+    syncGalleryLikeUi();
+    const syncActiveTileDataset = () => {
+      if (!currentGalleryPreviewAssetKey) {
+        return;
+      }
       const activeTileButtons = document.querySelectorAll(`.helmet-tile--clickable[data-gallery-asset-key="${currentGalleryPreviewAssetKey}"]`);
       activeTileButtons.forEach((buttonEl) => {
         if (buttonEl instanceof HTMLElement) {
@@ -751,7 +802,23 @@ if (galleryLikeBtnEl instanceof HTMLButtonElement) {
           buttonEl.dataset.galleryLiked = currentGalleryLikedByViewer ? "1" : "0";
         }
       });
+    };
+    syncActiveTileDataset();
+    if (!currentGalleryPreviewAssetKey) {
+      return;
+    }
+    galleryLikeBtnEl.disabled = true;
+    try {
+      const payload = await submitGalleryLike(currentGalleryPreviewAssetKey, nextLiked);
+      currentGalleryLikedByViewer = Boolean(payload.likedByViewer);
+      currentGalleryLikeCount = Number.isFinite(payload.likeCount) ? Math.max(0, Math.floor(payload.likeCount)) : currentGalleryLikeCount;
+      syncGalleryLikeUi();
+      syncActiveTileDataset();
     } catch (_error) {
+      currentGalleryLikedByViewer = previousLiked;
+      currentGalleryLikeCount = previousLikeCount;
+      syncGalleryLikeUi();
+      syncActiveTileDataset();
       showUploadToast("Like non disponibile al momento.", "error");
     } finally {
       galleryLikeBtnEl.disabled = false;
