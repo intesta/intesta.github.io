@@ -442,7 +442,7 @@ body {
 .targets-jump-btn {
   position: fixed;
   left: 50%;
-  bottom: 72px;
+  bottom: 50px;
   transform: translateX(-50%);
   z-index: 82;
   border: none;
@@ -1376,7 +1376,7 @@ body {
 .ai-chat {
   position: fixed;
   left: 50%;
-  bottom: 72px;
+  bottom: 50px;
   transform: translateX(-50%);
   z-index: 80;
   opacity: 0;
@@ -1390,8 +1390,8 @@ body {
 }
 
 .ai-chat-launcher {
-  width: 100px;
-  height: 100px;
+  width: 130px;
+  height: 130px;
   border: none;
   border-radius: 0;
   background: transparent;
@@ -1580,7 +1580,7 @@ body {
   left: var(--site-side);
   z-index: 42;
   background-color: #f8f8f8;
-  background-image: radial-gradient(circle, #dadada var(--dot-radius), transparent var(--dot-radius));
+  background-image: radial-gradient(circle, rgb(235,235,235) var(--dot-radius), transparent var(--dot-radius));
   background-size: var(--dot-grid-size) var(--dot-grid-size);
   opacity: 0;
   pointer-events: none;
@@ -1613,7 +1613,7 @@ body {
 .profile-popup-close {
   position: fixed;
   top: 24px;
-  right: calc(var(--site-side) + 16px);
+  right: calc(var(--site-side) + 6px);
   z-index: 45;
   border: none;
   background: transparent;
@@ -1638,7 +1638,7 @@ body {
   width: min(100%, calc(var(--target-square) + 36px));
   min-height: 100vh;
   min-height: 100svh;
-  padding: clamp(74px, 14svh, 110px) 18px 72px;
+  padding: 39px 18px 72px;
   display: grid;
   grid-template-rows: auto auto auto 1fr;
   justify-items: center;
@@ -1692,13 +1692,14 @@ body {
   width: var(--target-square);
   max-width: 100%;
   aspect-ratio: 1 / 1;
-  display: grid;
-  place-items: center;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
 }
 
 .profile-photo {
-  width: calc(100% - (var(--target-inset) * 2));
-  height: calc(100% - (var(--target-inset) * 2));
+  width: 100%;
+  height: 100%;
   object-fit: cover;
   object-position: center;
   filter: grayscale(1) contrast(1.06);
@@ -1719,29 +1720,29 @@ body {
 .photo-corner--tl {
   top: 0;
   left: 0;
-  border-top: 2px solid #181c21;
-  border-left: 2px solid #181c21;
+  border-top: 1px solid #181c21;
+  border-left: 1px solid #181c21;
 }
 
 .photo-corner--tr {
   top: 0;
   right: 0;
-  border-top: 2px solid #181c21;
-  border-right: 2px solid #181c21;
+  border-top: 1px solid #181c21;
+  border-right: 1px solid #181c21;
 }
 
 .photo-corner--bl {
   bottom: 0;
   left: 0;
-  border-bottom: 2px solid #181c21;
-  border-left: 2px solid #181c21;
+  border-bottom: 1px solid #181c21;
+  border-left: 1px solid #181c21;
 }
 
 .photo-corner--br {
   bottom: 0;
   right: 0;
-  border-bottom: 2px solid #181c21;
-  border-right: 2px solid #181c21;
+  border-bottom: 1px solid #181c21;
+  border-right: 1px solid #181c21;
 }
 
 .profile-bio {

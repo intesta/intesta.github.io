@@ -473,7 +473,7 @@ app.innerHTML = `
     </button>
     <div class="profile-popup-body">
       <article class="profile-card" aria-label="Profilo di Tomas Berardi">
-        <p class="profile-name">Tomas._.Berardi</p>
+        <p class="profile-name">&nbsp;&nbsp;Tomas._.Berardi</p>
         <div class="profile-photo-frame" aria-hidden="true">
           <span class="photo-corner photo-corner--tl"></span>
           <span class="photo-corner photo-corner--tr"></span>
@@ -768,7 +768,7 @@ Vincoli: niente divagazioni su temi non collegati al progetto/sito; niente inven
 
 const popupContent = {
   tomas: `
-    <p class="profile-name">Tomas._.Berardi</p>
+    <p class="profile-name">&nbsp;&nbsp;Tomas._.Berardi</p>
     <div class="profile-photo-frame" aria-hidden="true">
       <span class="photo-corner photo-corner--tl"></span>
       <span class="photo-corner photo-corner--tr"></span>
