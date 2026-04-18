@@ -818,7 +818,8 @@ b{
 
 .gallery-preview-caption {
   margin: 0;
-  padding-bottom: 50px;
+  margin-top: 50px;
+  width: 100%;
   font-size: 13px;
   line-height: 1.25;
   font-weight: 400;
