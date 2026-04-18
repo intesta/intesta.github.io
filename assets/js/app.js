@@ -1973,6 +1973,16 @@ function renderControls(controlType) {
       isAlex: true
     }];
 
+    const animateSubmittedCorners = (targetEl) => {
+      if (!(targetEl instanceof HTMLElement)) {
+        return;
+      }
+      targetEl.classList.remove("is-corners-thick");
+      window.requestAnimationFrame(() => {
+        targetEl.classList.add("is-corners-thick");
+      });
+    };
+
     const syncGalleryTiles = () => {
       if (!(galleryTilesGridEl instanceof HTMLElement)) {
         return;
@@ -2149,6 +2159,7 @@ function renderControls(controlType) {
       }
       if (descriptionBoxEl instanceof HTMLElement) {
         descriptionBoxEl.classList.remove("is-text-locked");
+        descriptionBoxEl.classList.toggle("is-corners-thick", Boolean(lockedContribution && lockedContribution.text));
       }
       if (lockedContribution && lockedContribution.text && descriptionEl instanceof HTMLTextAreaElement) {
         descriptionEl.value = lockedContribution.text.description || "";
@@ -2169,6 +2180,7 @@ function renderControls(controlType) {
       }
       if (uploadBoxEl instanceof HTMLElement) {
         uploadBoxEl.classList.toggle("is-image-locked", hasImageLock);
+        uploadBoxEl.classList.toggle("is-corners-thick", hasImageLock);
       }
       if (hasImageLock && imagePreviewEl instanceof HTMLImageElement) {
         const imageUrl = lockedContribution.image.previewUrl || buildContributionImageUrl(lockedContribution.image.imagePath || "");
@@ -2251,6 +2263,7 @@ function renderControls(controlType) {
             description
           }
         });
+        animateSubmittedCorners(descriptionBoxEl);
         showUploadToast("Descrizione inviata correttamente.", "success");
         if (sendPopupTextEl instanceof HTMLElement) {
           closeHelmetSendPopup(sendPopupTextEl, sendTextEl);
@@ -2347,6 +2360,7 @@ function renderControls(controlType) {
             previewUrl: imagePreviewEl.src || ""
           }
         });
+        animateSubmittedCorners(uploadBoxEl);
         showUploadToast("Foto inviata correttamente.", "success");
         if (sendPopupImageEl instanceof HTMLElement) {
           closeHelmetSendPopup(sendPopupImageEl, sendImageEl);

@@ -1215,6 +1215,7 @@ body {
   width: 24px;
   height: 24px;
   pointer-events: none;
+  transition: border-width 220ms var(--motion-ease);
 }
 
 .target-corner--tl {
@@ -1243,6 +1244,26 @@ body {
   right: 0;
   border-bottom: 1px solid #181c21;
   border-right: 1px solid #181c21;
+}
+
+.target-btn.is-corners-thick .target-corner--tl {
+  border-top-width: 2px;
+  border-left-width: 2px;
+}
+
+.target-btn.is-corners-thick .target-corner--tr {
+  border-top-width: 2px;
+  border-right-width: 2px;
+}
+
+.target-btn.is-corners-thick .target-corner--bl {
+  border-bottom-width: 2px;
+  border-left-width: 2px;
+}
+
+.target-btn.is-corners-thick .target-corner--br {
+  border-bottom-width: 2px;
+  border-right-width: 2px;
 }
 
 .choice-btn.is-picked {
