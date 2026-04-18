@@ -41,6 +41,10 @@ body {
   overflow: hidden;
 }
 
+b{
+  font-weight: 700!important;
+}
+
 #app {
   min-height: 100vh;
   min-height: 100svh;
