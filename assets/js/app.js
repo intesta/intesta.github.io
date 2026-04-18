@@ -482,14 +482,11 @@ app.innerHTML = `
           <img class="profile-photo" src="./assets/images/tomas.png" alt="Ritratto di Tomas Berardi" />
         </div>
         <p class="profile-bio">
-          Sono uno studente ISIA: università di Design del prodotto e della comunicazione.
-          Vivo a Faenza ed ho 21 anni, Ho bisogno del tuo aiuto per il mio progetto di tesi
-          che tratta il tema dell’utilizzo del casco tra noi giovani.
-          Ho realizzato appositamente per voi un attività, se sei un creativo te la consiglio!
-          puoi trovare l’invito all’interno del sito e per informazioni non esitare a contattarmi.
+            <b>21 y.o.<br><br>Faenza<br><br>Studente ISIA</b>: università di Design del prodotto e della comunicazione.<br><br>Ho bisogno del tuo aiuto per il mio progetto di tesi.<br>Ho realizzato questo sito e attività per te, sei un protagonista!
         </p>
         <p class="profile-contact">
-          +39 331 380 99 22<br />
+          Per maggiori informazioni conttatami.<br>
+          <a href="tel:+393313809922">+39 331 380 99 22</a><br />
           <a href="mailto:intesta2026@gmail.com">intesta2026@gmail.com</a>
         </p>
       </article>
