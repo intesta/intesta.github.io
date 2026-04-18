@@ -482,7 +482,7 @@ app.innerHTML = `
           <img class="profile-photo" src="./assets/images/tomas.png" alt="Ritratto di Tomas Berardi" />
         </div>
         <p class="profile-bio">
-            <b>21 y.o.<br><br>Faenza<br><br>Studente ISIA</b>: università di Design del prodotto e della comunicazione.<br><br>Ho bisogno del tuo aiuto per il mio progetto di tesi.<br>Ho realizzato questo sito e attività per te, sei un protagonista!
+            <b>21 y.o.<br><br>Faenza<br><br>Studente ISIA</b>: università di Design del prodotto e della comunicazione.<br><br>Ho bisogno del tuo aiuto per il mio progetto di tesi.<br>Ho realizzato questo sito e attività per te!
         </p>
         <p class="profile-contact">
           Per maggiori informazioni conttatami.<br>
@@ -684,7 +684,7 @@ function openGalleryPreview(imageSrc, showAlexCaption = false, assetKey = "", li
   }
   syncGalleryLikeUi();
   galleryPreviewCaptionEl.hidden = !showAlexCaption;
-  galleryPreviewCaptionEl.innerHTML = showAlexCaption ? "ALEX TIMONCINI <br> WEB DEVELOPER DI INTESTA" : "";
+  galleryPreviewCaptionEl.innerHTML = showAlexCaption ? "<b>@alex.timoncini<br><br>Brisighella<br><br>Full-Stack Web Developer</b><br><br>+39 393 456 200<br>timoncinidev@gmail.com" : "";
   galleryPreviewEl.hidden = false;
   galleryPreviewEl.classList.remove("is-closing");
   window.requestAnimationFrame(() => {
@@ -774,7 +774,7 @@ const popupContent = {
       <img class="profile-photo" src="./assets/images/tomas.png" alt="Ritratto di Tomas Berardi" />
     </div>
     <p class="profile-bio">
-        <b>21 y.o.<br><br>Faenza<br><br>Studente ISIA</b>: università di Design del prodotto e della comunicazione.<br><br>Ho bisogno del tuo aiuto per il mio progetto di tesi.<br>Ho realizzato questo sito e attività per te, sei un protagonista!
+        <b>21 y.o.<br><br>Faenza<br><br>Studente ISIA</b>: università di Design del prodotto e della comunicazione.<br><br>Ho bisogno del tuo aiuto per il mio progetto di tesi.<br>Ho realizzato questo sito e attività per te!
     </p>
     <p class="profile-contact">
       Per maggiori informazioni conttatami.<br>
