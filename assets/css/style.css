@@ -1837,7 +1837,7 @@ b{
   min-height: 100svh;
   padding: 39px 18px 72px;
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto auto;
   justify-items: center;
   text-align: left;
   gap: 14px;

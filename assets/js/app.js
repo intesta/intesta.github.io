@@ -338,7 +338,6 @@ if (window.location.hash === "#/admin") {
             <button class="admin-btn admin-btn--success" type="button" data-admin-set-status="approved">Approva</button>
             <button class="admin-btn admin-btn--danger" type="button" data-admin-set-status="rejected">Non approvato</button>
           </div>
-          <button class="admin-btn admin-btn--danger admin-btn--full" type="button" data-admin-delete-unapproved>Elimina invii non approvati</button>
         </article>
       </section>
     `;
@@ -429,6 +428,7 @@ if (window.location.hash === "#/admin") {
               Da approvare
               <span class="admin-count-dot">${adminState.pendingCount}</span>
             </p>
+            <button class="admin-btn admin-btn--danger" type="button" data-admin-delete-unapproved>Elimina invii non approvati</button>
           </div>
         </header>
         <main class="admin-main">
@@ -539,23 +539,25 @@ if (window.location.hash === "#/admin") {
         return;
       }
       button.addEventListener("click", async () => {
-        if (adminState.selectedDeviceId === null || adminState.requestPending) {
+        if (adminState.requestPending) {
           return;
         }
-        const shouldDelete = window.confirm("Eliminare tutti gli invii non approvati di questo dispositivo?");
+        const shouldDelete = window.confirm("Eliminare tutti gli invii non approvati?");
         if (!shouldDelete) {
           return;
         }
         adminState.requestPending = true;
         try {
           await adminRequest("/device-delete-unapproved", {
-            method: "POST",
-            body: {
-              deviceId: adminState.selectedDeviceId
-            }
+            method: "POST"
           });
-          adminState.selectedDeviceId = null;
           await loadAdminData();
+          if (adminState.selectedDeviceId !== null) {
+            const stillExists = adminState.groups.some((group) => Number(group.deviceId) === Number(adminState.selectedDeviceId));
+            if (!stillExists) {
+              adminState.selectedDeviceId = null;
+            }
+          }
         } finally {
           adminState.requestPending = false;
           renderAdmin();
