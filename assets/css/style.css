@@ -191,7 +191,7 @@ b{
   position: absolute;
   inset: 0;
   opacity: 0;
-  background-size: 100% 100%;
+  background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
   transform: scale(1.02);
@@ -297,6 +297,7 @@ b{
   display: block;
   overflow-y: auto;
   overflow-x: hidden;
+  overscroll-behavior-x: none;
   -webkit-overflow-scrolling: touch;
   pointer-events: auto;
   padding: 0;
@@ -462,11 +463,13 @@ b{
   gap: var(--targets-gap);
   padding: 0;
   pointer-events: auto;
+  overflow-x: hidden;
 }
 
 .targets-layout {
   width: 100%;
   display: block;
+  overflow-x: hidden;
 }
 
 .targets-screen {
@@ -721,7 +724,8 @@ b{
   align-content: stretch;
   min-height: 100svh;
   padding: var(--targets-vpad) 0;
-  overflow: hidden;
+  overflow-y: hidden;
+  overflow-x: hidden;
 }
 
 .target-btn--gallery {
@@ -732,6 +736,7 @@ b{
   aspect-ratio: auto;
   align-items: stretch;
   align-content: stretch;
+  overflow: hidden;
 }
 
 .helmet-tiles-grid {
