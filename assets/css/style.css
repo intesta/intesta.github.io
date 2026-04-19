@@ -2104,6 +2104,19 @@ body.admin-mode .legal-dock {
   margin: 0;
 }
 
+.admin-modal-settings {
+  display: grid;
+  gap: 6px;
+  border-radius: 12px;
+  border: 1px solid rgba(20, 27, 38, 0.1);
+  padding: 10px;
+  background: rgba(248, 249, 251, 0.9);
+}
+
+.admin-btn--full {
+  width: 100%;
+}
+
 .admin-actions {
   display: flex;
   justify-content: flex-end;

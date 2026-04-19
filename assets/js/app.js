@@ -314,6 +314,19 @@ if (window.location.hash === "#/admin") {
           <button class="admin-modal-close" type="button" data-admin-close-modal aria-label="Chiudi dettaglio">×</button>
           <h2 class="admin-modal-title">Dettaglio invio</h2>
           <p class="admin-list-meta">Stato attuale: <span class="admin-status admin-status--${escapeHtml(group.status || "pending")}">${escapeHtml(statusLabel(String(group.status || "pending")))}</span></p>
+          <div class="admin-modal-settings" role="group" aria-label="Aspetto home">
+            <p class="admin-hero-ui-title">Home hero logo/chevron</p>
+            <div class="admin-hero-ui">
+              <label class="admin-hero-ui-option">
+                <input type="radio" name="admin-hero-ui-tone-modal" value="white" ${adminState.heroUiTone === "white" ? "checked" : ""} />
+                <span>Logo bianco</span>
+              </label>
+              <label class="admin-hero-ui-option">
+                <input type="radio" name="admin-hero-ui-tone-modal" value="black" ${adminState.heroUiTone === "black" ? "checked" : ""} />
+                <span>Logo nero</span>
+              </label>
+            </div>
+          </div>
           ${textHtml}
           ${imageHtml}
           <form class="admin-image-upload-form" id="admin-image-upload-form">
@@ -325,6 +338,7 @@ if (window.location.hash === "#/admin") {
             <button class="admin-btn admin-btn--success" type="button" data-admin-set-status="approved">Approva</button>
             <button class="admin-btn admin-btn--danger" type="button" data-admin-set-status="rejected">Non approvato</button>
           </div>
+          <button class="admin-btn admin-btn--danger admin-btn--full" type="button" data-admin-delete-unapproved>Elimina invii non approvati</button>
         </article>
       </section>
     `;
@@ -415,17 +429,6 @@ if (window.location.hash === "#/admin") {
               Da approvare
               <span class="admin-count-dot">${adminState.pendingCount}</span>
             </p>
-            <div class="admin-hero-ui" role="group" aria-label="Aspetto logo e chevron">
-              <p class="admin-hero-ui-title">Logo/Chevron hero</p>
-              <label class="admin-hero-ui-option">
-                <input type="radio" name="admin-hero-ui-tone" value="white" ${adminState.heroUiTone === "white" ? "checked" : ""} />
-                <span>Logo bianco</span>
-              </label>
-              <label class="admin-hero-ui-option">
-                <input type="radio" name="admin-hero-ui-tone" value="black" ${adminState.heroUiTone === "black" ? "checked" : ""} />
-                <span>Logo nero</span>
-              </label>
-            </div>
           </div>
         </header>
         <main class="admin-main">
@@ -442,10 +445,11 @@ if (window.location.hash === "#/admin") {
     const openButtons = Array.from(document.querySelectorAll("[data-admin-open-device]"));
     const closeModalButtons = Array.from(document.querySelectorAll("[data-admin-close-modal]"));
     const statusButtons = Array.from(document.querySelectorAll("[data-admin-set-status]"));
+    const deleteUnapprovedButtons = Array.from(document.querySelectorAll("[data-admin-delete-unapproved]"));
     const imageUploadForm = document.querySelector("#admin-image-upload-form");
     const imageUploadSubmit = document.querySelector("#admin-image-upload-submit");
     const imageUploadInput = document.querySelector("#admin-image-file");
-    const heroUiToneInputs = Array.from(document.querySelectorAll("input[name=\"admin-hero-ui-tone\"]"));
+    const heroUiToneInputs = Array.from(document.querySelectorAll("input[name=\"admin-hero-ui-tone-modal\"]"));
 
     openButtons.forEach((button) => {
       if (!(button instanceof HTMLButtonElement)) {
@@ -523,6 +527,34 @@ if (window.location.hash === "#/admin") {
               status: nextStatus
             }
           });
+          await loadAdminData();
+        } finally {
+          adminState.requestPending = false;
+          renderAdmin();
+        }
+      });
+    });
+    deleteUnapprovedButtons.forEach((button) => {
+      if (!(button instanceof HTMLButtonElement)) {
+        return;
+      }
+      button.addEventListener("click", async () => {
+        if (adminState.selectedDeviceId === null || adminState.requestPending) {
+          return;
+        }
+        const shouldDelete = window.confirm("Eliminare tutti gli invii non approvati di questo dispositivo?");
+        if (!shouldDelete) {
+          return;
+        }
+        adminState.requestPending = true;
+        try {
+          await adminRequest("/device-delete-unapproved", {
+            method: "POST",
+            body: {
+              deviceId: adminState.selectedDeviceId
+            }
+          });
+          adminState.selectedDeviceId = null;
           await loadAdminData();
         } finally {
           adminState.requestPending = false;
