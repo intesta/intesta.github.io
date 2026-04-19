@@ -28,6 +28,11 @@
   --dot-grid-size: 24px;
   --dot-radius: 2px;
   --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --hero-ui-filter: brightness(0) invert(1);
+}
+
+:root[data-hero-ui-tone="black"] {
+  --hero-ui-filter: none;
 }
 
 body.is-app-loading {
@@ -163,6 +168,53 @@ b{
     visibility 0ms;
 }
 
+.slide--hero {
+  overflow: hidden;
+  left: 0;
+  right: 0;
+}
+
+.hero-carousel {
+  position: absolute;
+  inset: 0;
+  background: #000;
+}
+
+.hero-carousel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.hero-carousel-layer {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background-size: 100% 100%;
+  background-position: center;
+  background-repeat: no-repeat;
+  transform: scale(1.02);
+  transition: opacity 460ms var(--motion-ease);
+}
+
+.hero-carousel-layer.is-active {
+  opacity: 1;
+}
+
+.slide--hero .hero-logo {
+  position: fixed;
+  left: 50%;
+  top: var(--targets-vpad-base);
+  transform: translateX(-50%);
+  width: min(50vw, 175px);
+  height: auto;
+  display: block;
+  object-fit: contain;
+  filter: var(--hero-ui-filter);
+  z-index: 1;
+}
+
 .slide-title {
   position: fixed;
   top: 30%;
@@ -250,6 +302,25 @@ b{
   padding: 0;
   padding-bottom: 180px;
   scroll-snap-type: y proximity;
+}
+
+.controls.is-hero {
+  left: var(--site-side);
+  right: var(--site-side);
+  top: 0;
+  bottom: 0;
+  transform: none;
+  display: block;
+  pointer-events: none;
+}
+
+.slide-subtitle.is-hidden + .controls.is-hero {
+  top: 0;
+  bottom: 0;
+}
+
+.controls.is-hero .targets-jump-btn {
+  pointer-events: auto;
 }
 
 @media (min-width: 900px) {
@@ -512,12 +583,30 @@ b{
   width: 52px;
   height: 52px;
   transform: rotate(180deg);
+  animation: chevron-bounce-y 1.25s ease-in-out infinite;
+}
+
+.targets-jump-btn--hero .icon-svg--down {
+  filter: var(--hero-ui-filter);
 }
 
 .targets-jump-btn.is-hidden {
   opacity: 0;
   pointer-events: none;
   transform: translateX(-50%) scale(0.92);
+}
+
+@keyframes chevron-bounce-y {
+  0%,
+  100% {
+    transform: rotate(180deg) translateY(0);
+  }
+  35% {
+    transform: rotate(180deg) translateY(-6px);
+  }
+  70% {
+    transform: rotate(180deg) translateY(2px);
+  }
 }
 
 .targets-lower {
@@ -892,6 +981,10 @@ b{
   .gallery-preview-shell,
   .gallery-preview-caption {
     transition: none;
+  }
+
+  .targets-jump-btn .icon-svg--down {
+    animation: none;
   }
 
   .app-loader {
@@ -1975,6 +2068,35 @@ body.admin-mode .legal-dock {
   display: inline-flex;
   align-items: center;
   gap: 7px;
+}
+
+.admin-hero-ui {
+  margin-top: 6px;
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-hero-ui-title {
+  margin: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #5a6473;
+}
+
+.admin-hero-ui-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.78rem;
+  color: #27303b;
+  cursor: pointer;
+}
+
+.admin-hero-ui-option input {
+  margin: 0;
 }
 
 .admin-actions {

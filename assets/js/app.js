@@ -2,6 +2,64 @@
 
 const appLoaderEl = document.querySelector("#app-loader");
 let isAppLoaderHidden = false;
+const startupTasks = new Set();
+const HERO_UI_TONE_STORAGE_KEY = "intesta_hero_ui_tone_v1";
+const STATIC_IMAGE_PRELOAD_URLS = [
+  "./assets/images/logo.png",
+  "./assets/images/tomas.png",
+  "./assets/images/casco.png",
+  "./assets/images/alex.png",
+  "./assets/images/base_casco_intesta.png",
+  "./assets/images/AI.png",
+  "./assets/images/chevrons-down.svg",
+  "./assets/images/send-light.svg",
+  "./assets/images/send.svg",
+  "./assets/images/upload.svg",
+  "./assets/images/check-circle.svg",
+  "./assets/images/alert-circle.svg",
+  "./assets/images/close_popup.svg",
+  "./assets/images/empty-like.svg",
+  "./assets/images/like.png"
+];
+
+function normalizeHeroUiTone(value) {
+  return value === "black" ? "black" : "white";
+}
+
+function getStoredHeroUiTone() {
+  try {
+    return normalizeHeroUiTone(window.localStorage.getItem(HERO_UI_TONE_STORAGE_KEY) || "");
+  } catch (_error) {
+    return "white";
+  }
+}
+
+function storeHeroUiTone(nextTone) {
+  const normalizedTone = normalizeHeroUiTone(nextTone);
+  try {
+    window.localStorage.setItem(HERO_UI_TONE_STORAGE_KEY, normalizedTone);
+  } catch (_error) {
+    // Ignore storage failures (private mode, quota, etc.)
+  }
+  return normalizedTone;
+}
+
+function applyHeroUiTone(nextTone) {
+  const normalizedTone = normalizeHeroUiTone(nextTone);
+  document.documentElement.dataset.heroUiTone = normalizedTone;
+  return normalizedTone;
+}
+
+function registerStartupTask(taskPromise) {
+  if (!(taskPromise instanceof Promise)) {
+    return taskPromise;
+  }
+  startupTasks.add(taskPromise);
+  taskPromise.finally(() => {
+    startupTasks.delete(taskPromise);
+  });
+  return taskPromise;
+}
 
 function waitForImageLoad(imageEl) {
   return new Promise((resolve) => {
@@ -16,6 +74,24 @@ function waitForImageLoad(imageEl) {
     };
     imageEl.addEventListener("load", onDone, { once: true });
     imageEl.addEventListener("error", onDone, { once: true });
+  });
+}
+
+function preloadImageUrl(sourceUrl) {
+  return new Promise((resolve) => {
+    if (!sourceUrl) {
+      resolve();
+      return;
+    }
+    const preloadImage = new Image();
+    const onDone = () => {
+      preloadImage.removeEventListener("load", onDone);
+      preloadImage.removeEventListener("error", onDone);
+      resolve();
+    };
+    preloadImage.addEventListener("load", onDone, { once: true });
+    preloadImage.addEventListener("error", onDone, { once: true });
+    preloadImage.src = sourceUrl;
   });
 }
 
@@ -41,10 +117,18 @@ async function bootLoader() {
   }
   const images = Array.from(document.querySelectorAll("img"));
   await Promise.all(images.map((imageEl) => waitForImageLoad(imageEl)));
+  while (startupTasks.size > 0) {
+    const pendingTasks = Array.from(startupTasks);
+    await Promise.allSettled(pendingTasks);
+  }
   window.requestAnimationFrame(() => {
     hideAppLoader();
   });
 }
+
+registerStartupTask(Promise.all(STATIC_IMAGE_PRELOAD_URLS.map((sourceUrl) => preloadImageUrl(sourceUrl))));
+
+applyHeroUiTone(getStoredHeroUiTone());
 
 void bootLoader();
 
@@ -64,7 +148,8 @@ if (window.location.hash === "#/admin") {
     groups: [],
     selectedDeviceId: null,
     requestPending: false,
-    error: ""
+    error: "",
+    heroUiTone: getStoredHeroUiTone()
   };
 
   function escapeHtml(value) {
@@ -330,6 +415,17 @@ if (window.location.hash === "#/admin") {
               Da approvare
               <span class="admin-count-dot">${adminState.pendingCount}</span>
             </p>
+            <div class="admin-hero-ui" role="group" aria-label="Aspetto logo e chevron">
+              <p class="admin-hero-ui-title">Logo/Chevron hero</p>
+              <label class="admin-hero-ui-option">
+                <input type="radio" name="admin-hero-ui-tone" value="white" ${adminState.heroUiTone === "white" ? "checked" : ""} />
+                <span>Logo bianco</span>
+              </label>
+              <label class="admin-hero-ui-option">
+                <input type="radio" name="admin-hero-ui-tone" value="black" ${adminState.heroUiTone === "black" ? "checked" : ""} />
+                <span>Logo nero</span>
+              </label>
+            </div>
           </div>
         </header>
         <main class="admin-main">
@@ -349,6 +445,7 @@ if (window.location.hash === "#/admin") {
     const imageUploadForm = document.querySelector("#admin-image-upload-form");
     const imageUploadSubmit = document.querySelector("#admin-image-upload-submit");
     const imageUploadInput = document.querySelector("#admin-image-file");
+    const heroUiToneInputs = Array.from(document.querySelectorAll("input[name=\"admin-hero-ui-tone\"]"));
 
     openButtons.forEach((button) => {
       if (!(button instanceof HTMLButtonElement)) {
@@ -392,6 +489,18 @@ if (window.location.hash === "#/admin") {
         renderAdmin();
       });
     }
+    heroUiToneInputs.forEach((inputEl) => {
+      if (!(inputEl instanceof HTMLInputElement)) {
+        return;
+      }
+      inputEl.addEventListener("change", () => {
+        if (!inputEl.checked) {
+          return;
+        }
+        adminState.heroUiTone = storeHeroUiTone(inputEl.value);
+        applyHeroUiTone(adminState.heroUiTone);
+      });
+    });
 
     statusButtons.forEach((button) => {
       if (!(button instanceof HTMLButtonElement)) {
@@ -489,7 +598,7 @@ if (window.location.hash === "#/admin") {
 } else {
 
 const slides = [
-  { title: "CIAO!", subtitle: "Ho una missione per te", control: "down" },
+  { title: "", subtitle: "", control: "hero" },
   { title: "Sei uno studente?", subtitle: "", control: "choice" },
   { title: "Hai una bici?", subtitle: "", control: "choice" },
   { title: "Utilizzi un casco?", subtitle: "", control: "choice" },
@@ -499,6 +608,7 @@ const TARGETS_SLIDE_INDEX = 4;
 const POPUP_ANIMATION_MS = 320;
 const CHOICE_ANIMATION_MS = 340;
 const CHOICE_SWEEP_BLUR_PX = 1.8;
+const HERO_CAROUSEL_INTERVAL_MS = 2600;
 
 const app = document.querySelector("#app");
 
@@ -913,10 +1023,77 @@ const GALLERY_LIKE_ENDPOINTS = [
 const slideEls = slides.map((slideData) => {
   const section = document.createElement("section");
   section.className = "slide";
-  section.innerHTML = `<h1 class="slide-title">${slideData.title}</h1>`;
+  if (slideData.control === "hero") {
+    section.classList.add("slide--hero");
+    section.innerHTML = `
+      <div class="hero-carousel" aria-hidden="true">
+        <div class="hero-carousel-layer is-active" id="hero-layer-a"></div>
+        <div class="hero-carousel-layer" id="hero-layer-b"></div>
+      </div>
+      <img class="hero-logo" src="./assets/images/logo.png" alt="Logo Intesta" />
+    `;
+  } else {
+    section.innerHTML = `<h1 class="slide-title">${slideData.title}</h1>`;
+  }
   slidesContainer.append(section);
   return section;
 });
+
+const heroLayerAEl = slideEls[0]?.querySelector("#hero-layer-a");
+const heroLayerBEl = slideEls[0]?.querySelector("#hero-layer-b");
+let heroBackgroundSources = ["./assets/images/casco.png"];
+let heroActiveLayerIsA = true;
+let heroCarouselIndex = 0;
+let heroCarouselTimerId = null;
+
+function setHeroLayerSource(layerEl, sourceUrl) {
+  if (!(layerEl instanceof HTMLElement) || !sourceUrl) {
+    return;
+  }
+  layerEl.style.backgroundImage = `url("${sourceUrl.replace(/"/g, "%22")}")`;
+}
+
+function applyHeroBackgroundSources(sourceUrls) {
+  const nextSources = Array.isArray(sourceUrls)
+    ? sourceUrls.filter((sourceUrl, index, arr) => Boolean(sourceUrl) && arr.indexOf(sourceUrl) === index)
+    : [];
+  heroBackgroundSources = nextSources.length > 0 ? nextSources : ["./assets/images/casco.png"];
+  heroCarouselIndex = 0;
+  heroActiveLayerIsA = true;
+  setHeroLayerSource(heroLayerAEl, heroBackgroundSources[0]);
+  setHeroLayerSource(heroLayerBEl, heroBackgroundSources[0]);
+  if (heroLayerAEl instanceof HTMLElement) {
+    heroLayerAEl.classList.add("is-active");
+  }
+  if (heroLayerBEl instanceof HTMLElement) {
+    heroLayerBEl.classList.remove("is-active");
+  }
+}
+
+function startHeroCarousel() {
+  if (!(heroLayerAEl instanceof HTMLElement) || !(heroLayerBEl instanceof HTMLElement)) {
+    return;
+  }
+  if (heroCarouselTimerId !== null) {
+    window.clearInterval(heroCarouselTimerId);
+    heroCarouselTimerId = null;
+  }
+  if (heroBackgroundSources.length <= 1) {
+    return;
+  }
+  heroCarouselTimerId = window.setInterval(() => {
+    heroCarouselIndex = (heroCarouselIndex + 1) % heroBackgroundSources.length;
+    const nextLayerEl = heroActiveLayerIsA ? heroLayerBEl : heroLayerAEl;
+    const previousLayerEl = heroActiveLayerIsA ? heroLayerAEl : heroLayerBEl;
+    setHeroLayerSource(nextLayerEl, heroBackgroundSources[heroCarouselIndex]);
+    nextLayerEl.classList.add("is-active");
+    previousLayerEl.classList.remove("is-active");
+    heroActiveLayerIsA = !heroActiveLayerIsA;
+  }, HERO_CAROUSEL_INTERVAL_MS);
+}
+
+applyHeroBackgroundSources(heroBackgroundSources);
+startHeroCarousel();
 
 function appendChatMessage(role, text) {
   const msg = document.createElement("p");
@@ -1221,6 +1398,18 @@ async function fetchApprovedGalleryImages() {
     isAlex: true
   }];
 }
+
+registerStartupTask((async () => {
+  const approvedItems = await fetchApprovedGalleryImages();
+  const heroSources = approvedItems
+    .filter((item) => item && typeof item === "object" && !item.isAlex)
+    .map((item) => (typeof item.src === "string" ? item.src : ""))
+    .filter((item) => Boolean(item));
+  const nextSources = heroSources.length > 0 ? heroSources : ["./assets/images/casco.png"];
+  await Promise.all(nextSources.map((sourceUrl) => preloadImageUrl(sourceUrl)));
+  applyHeroBackgroundSources(nextSources);
+  startHeroCarousel();
+})());
 
 async function submitGalleryLike(assetKey, liked) {
   const deviceCode = persistedDeviceCode || (await ensureDeviceCode());
@@ -1724,6 +1913,22 @@ function renderControls(controlType) {
   controlsEl.onscroll = null;
   controlsEl.classList.toggle("is-choice", controlType === "choice");
   controlsEl.classList.toggle("is-targets", controlType === "targets");
+  controlsEl.classList.toggle("is-hero", controlType === "hero");
+
+  if (controlType === "hero") {
+    const button = document.createElement("button");
+    button.className = "targets-jump-btn targets-jump-btn--hero";
+    button.type = "button";
+    button.setAttribute("aria-label", "Scorri alla slide successiva");
+    button.innerHTML = `
+      <img class="icon-svg icon-svg--down" src="./assets/images/chevrons-down.svg" alt="" aria-hidden="true" />
+    `;
+    button.addEventListener("click", () => {
+      next();
+    });
+    controlsEl.append(button);
+    return;
+  }
 
   if (controlType === "down") {
     const button = document.createElement("button");
