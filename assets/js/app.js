@@ -734,6 +734,7 @@ const controlsEl = app.querySelector("#slide-controls");
 const popupEl = app.querySelector("#profile-popup");
 const popupCloseEl = app.querySelector("#profile-popup-close");
 const popupCardEl = app.querySelector(".profile-card");
+const defaultPopupCloseMarkup = popupCloseEl instanceof HTMLElement ? popupCloseEl.innerHTML : "";
 const galleryPreviewEl = app.querySelector("#gallery-preview");
 const galleryPreviewBackdropEl = app.querySelector("#gallery-preview-backdrop");
 const galleryPreviewCloseEl = app.querySelector("#gallery-preview-close");
@@ -998,21 +999,40 @@ const popupContent = {
     </p>
   `,
   casco: `
-    <p class="profile-name">Casco</p>
-    <div class="profile-photo-frame" aria-hidden="true">
-      <span class="photo-corner photo-corner--tl"></span>
-      <span class="photo-corner photo-corner--tr"></span>
-      <span class="photo-corner photo-corner--bl"></span>
-      <span class="photo-corner photo-corner--br"></span>
-      <img class="profile-photo profile-photo--helmet" src="./assets/images/casco.png" alt="Immagine casco" />
-    </div>
-    <p class="profile-bio">
-      Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor
-      incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
-      exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-    </p>
+    <article class="helmet-event-card" aria-label="Evento casco">
+      <header class="helmet-event-head">
+        <p class="helmet-event-place">Parco Bucci Faenza</p>
+        <p class="helmet-event-address">Entrata piazzale Pancrazi</p>
+      </header>
+      <p class="helmet-event-title">EVENTO COMPETITIVO<br />DESIGN DI GRUPPO</p>
+      <div class="helmet-event-photo-wrap">
+        <img class="helmet-event-photo" src="./assets/images/casco.png" alt="Immagine casco" />
+      </div>
+      <div class="helmet-event-time">
+        <p class="helmet-event-time-col helmet-event-time-col--left">
+          <span>09</span>
+          <span>05</span>
+          <span>26</span>
+        </p>
+        <p class="helmet-event-time-col helmet-event-time-col--right">
+          <span>15</span>
+          <span>00</span>
+        </p>
+      </div>
+      <img class="helmet-event-chevron" src="./assets/images/chevrons-down.svg" alt="" aria-hidden="true" />
+    </article>
   `
 };
+
+function syncProfilePopupVariant(type) {
+  if (!(popupEl instanceof HTMLElement) || !(popupCloseEl instanceof HTMLButtonElement)) {
+    return;
+  }
+  const isHelmetVariant = type === "casco";
+  popupEl.classList.toggle("is-helmet-event-mode", isHelmetVariant);
+  popupCloseEl.innerHTML = defaultPopupCloseMarkup;
+  popupCloseEl.setAttribute("aria-label", "Chiudi popup profilo");
+}
 
 const legalPopupPages = {
   PR: { href: "./privacy.html", title: "Privacy Policy" },
@@ -1795,6 +1815,7 @@ function openProfilePopup(type) {
   }
   currentPopupMode = "profile";
   popupEl.classList.remove("is-legal-mode");
+  syncProfilePopupVariant(type);
   popupCardEl.innerHTML = popupContent[type] || popupContent.tomas;
   popupEl.hidden = false;
   popupEl.classList.remove("is-closing");
@@ -1818,6 +1839,7 @@ function openLegalPopup(pageKey) {
   }
 
   currentPopupMode = "legal";
+  syncProfilePopupVariant("tomas");
   popupEl.classList.add("is-legal-mode");
   popupCardEl.innerHTML = `
     <section class="legal-popup-shell" aria-label="${page.title}">
@@ -1850,6 +1872,7 @@ function closeProfilePopup() {
       popupEl.classList.remove("is-legal-mode");
       currentPopupMode = "profile";
     }
+    syncProfilePopupVariant("tomas");
     popupCloseTimer = null;
     syncChatVisibility();
   }, POPUP_ANIMATION_MS);
