@@ -156,6 +156,7 @@ if (window.location.hash === "#/admin") {
   }
 
   const ADMIN_API_BASE = "https://foxly.it/intesta_api/admin";
+  const ADMIN_AUTH_TOKEN_STORAGE_KEY = "intesta_admin_token_v1";
   const adminState = {
     authenticated: false,
     loading: true,
@@ -163,7 +164,8 @@ if (window.location.hash === "#/admin") {
     groups: [],
     selectedDeviceId: null,
     requestPending: false,
-    error: ""
+    error: "",
+    authToken: ""
   };
 
   function escapeHtml(value) {
@@ -197,6 +199,28 @@ if (window.location.hash === "#/admin") {
     const config = window.INTESA_ADMIN || {};
     const customBase = config.baseUrl ? String(config.baseUrl).trim() : "";
     return customBase || ADMIN_API_BASE;
+  }
+
+  function getStoredAdminAuthToken() {
+    try {
+      return String(window.localStorage.getItem(ADMIN_AUTH_TOKEN_STORAGE_KEY) || "").trim();
+    } catch (_error) {
+      return "";
+    }
+  }
+
+  function storeAdminAuthToken(nextToken) {
+    const token = String(nextToken || "").trim();
+    try {
+      if (token) {
+        window.localStorage.setItem(ADMIN_AUTH_TOKEN_STORAGE_KEY, token);
+      } else {
+        window.localStorage.removeItem(ADMIN_AUTH_TOKEN_STORAGE_KEY);
+      }
+    } catch (_error) {
+      // Ignore storage failures.
+    }
+    return token;
   }
 
   function adminResponseMessage(payload, fallbackMessage) {
@@ -255,7 +279,11 @@ if (window.location.hash === "#/admin") {
     }
 
     const base = getAdminApiBase();
-    const response = await fetch(`${base}${path}`, requestOptions);
+    let requestPath = String(path || "");
+    if (adminState.authToken) {
+      requestPath += `${requestPath.includes("?") ? "&" : "?"}adminToken=${encodeURIComponent(adminState.authToken)}`;
+    }
+    const response = await fetch(`${base}${requestPath}`, requestOptions);
     let payload = null;
     try {
       payload = await response.json();
@@ -273,6 +301,7 @@ if (window.location.hash === "#/admin") {
     }
     if (response.status === 401) {
       adminState.authenticated = false;
+      adminState.authToken = storeAdminAuthToken("");
     }
     return false;
   }
@@ -291,6 +320,7 @@ if (window.location.hash === "#/admin") {
     }
     if (response.status === 401) {
       adminState.authenticated = false;
+      adminState.authToken = storeAdminAuthToken("");
     }
     return false;
   }
@@ -449,6 +479,7 @@ if (window.location.hash === "#/admin") {
               renderAdmin();
               return;
             }
+            adminState.authToken = storeAdminAuthToken(payload?.authToken || "");
             adminState.authenticated = true;
             adminState.loading = true;
             renderAdmin();
@@ -556,6 +587,7 @@ if (window.location.hash === "#/admin") {
           showAdminToast("Errore di rete durante logout.", "error");
         }
         adminState.authenticated = false;
+        adminState.authToken = storeAdminAuthToken("");
         adminState.groups = [];
         adminState.selectedDeviceId = null;
         adminState.error = "";
@@ -758,9 +790,13 @@ if (window.location.hash === "#/admin") {
   }
 
   void (async () => {
+    adminState.authToken = getStoredAdminAuthToken();
     try {
       const { response, payload } = await adminRequest("/session");
       adminState.authenticated = Boolean(response.ok && payload?.result === 1 && payload?.authenticated === 1);
+      if (response.ok && payload?.result === 1 && payload?.authToken) {
+        adminState.authToken = storeAdminAuthToken(payload.authToken);
+      }
       if (adminState.authenticated) {
         await loadAdminData();
       }
