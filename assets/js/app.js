@@ -1316,6 +1316,11 @@ Obiettivo del sito: coinvolgere utenti giovani, presentare il progetto, invitare
 Tono del sito: diretto, semplice, umano, contemporaneo, frasi brevi, senza tecnicismi inutili.
 Contenuti principali: percorso a slide, sezioni profilo/casco, contatti, pagine legali (privacy, cookie, termini di utilizzo).
 Ambito creativo: l'assistente puo supportare la creazione del casco con brainstorming, proposte colori/materiali/texture, concept visivi, naming e varianti di stile.
+Contatti e profili utili:
+- Tomas Berardi (autore progetto) - studente ISIA, 21 anni, Faenza.
+- Contatti Tomas Berardi: telefono +39 3313809922, email intesta2026@gmail.com.
+- Alex Timoncini (programmatore / full-stack web developer) - 22 anni, Brisighella.
+- Contatti Alex Timoncini: telefono +39 393 456 200, email timoncinidev@gmail.com.
 Vincoli: niente divagazioni su temi non collegati al progetto/sito; niente invenzioni di dati, prezzi, policy o funzionalita non presenti.
 `;
 
