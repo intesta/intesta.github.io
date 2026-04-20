@@ -195,50 +195,70 @@ function preloadImageUrl(sourceUrl) {
   return preloadPromise;
 }
 
-function warmGalleryLikeIconDuringLoader() {
+function warmImageUrlsDuringLoader(imageUrls) {
   return new Promise((resolve) => {
     if (!(document.body instanceof HTMLElement)) {
       resolve();
       return;
     }
-    const warmupImage = new Image();
-    warmupImage.decoding = "sync";
-    warmupImage.loading = "eager";
-    warmupImage.alt = "";
-    warmupImage.width = 44;
-    warmupImage.height = 44;
-    warmupImage.style.position = "fixed";
-    warmupImage.style.left = "-9999px";
-    warmupImage.style.top = "-9999px";
-    warmupImage.style.width = "44px";
-    warmupImage.style.height = "44px";
-    warmupImage.style.opacity = "0";
-    warmupImage.style.pointerEvents = "none";
-    const onDone = async () => {
-      warmupImage.removeEventListener("load", onDone);
-      warmupImage.removeEventListener("error", onDone);
-      if (typeof warmupImage.decode === "function") {
-        try {
-          await warmupImage.decode();
-        } catch (_error) {
-          // Ignore decode failures and continue.
+    const normalizedUrls = Array.from(new Set(
+      (Array.isArray(imageUrls) ? imageUrls : [])
+        .map((url) => String(url || "").trim())
+        .filter(Boolean)
+    ));
+    if (normalizedUrls.length === 0) {
+      resolve();
+      return;
+    }
+    const warmupImages = normalizedUrls.map((url) => {
+      const warmupImage = new Image();
+      warmupImage.decoding = "sync";
+      warmupImage.loading = "eager";
+      warmupImage.alt = "";
+      warmupImage.width = 44;
+      warmupImage.height = 44;
+      warmupImage.style.position = "fixed";
+      warmupImage.style.left = "-9999px";
+      warmupImage.style.top = "-9999px";
+      warmupImage.style.width = "44px";
+      warmupImage.style.height = "44px";
+      warmupImage.style.opacity = "0";
+      warmupImage.style.pointerEvents = "none";
+      return warmupImage;
+    });
+    Promise.all(warmupImages.map((warmupImage, index) => new Promise((resolveImage) => {
+      const onDone = async () => {
+        warmupImage.removeEventListener("load", onDone);
+        warmupImage.removeEventListener("error", onDone);
+        if (typeof warmupImage.decode === "function") {
+          try {
+            await warmupImage.decode();
+          } catch (_error) {
+            // Ignore decode failures and continue.
+          }
         }
-      }
-      document.body.appendChild(warmupImage);
-      // Force first layout/paint while loader is still visible.
-      void warmupImage.getBoundingClientRect();
+        resolveImage();
+      };
+      warmupImage.addEventListener("load", onDone, { once: true });
+      warmupImage.addEventListener("error", onDone, { once: true });
+      warmupImage.src = normalizedUrls[index];
+    }))).then(() => {
+      warmupImages.forEach((warmupImage) => {
+        document.body.appendChild(warmupImage);
+        // Force first layout/paint while loader is still visible.
+        void warmupImage.getBoundingClientRect();
+      });
       window.requestAnimationFrame(() => {
         window.requestAnimationFrame(() => {
-          if (warmupImage.isConnected) {
-            warmupImage.remove();
-          }
+          warmupImages.forEach((warmupImage) => {
+            if (warmupImage.isConnected) {
+              warmupImage.remove();
+            }
+          });
           resolve();
         });
       });
-    };
-    warmupImage.addEventListener("load", onDone, { once: true });
-    warmupImage.addEventListener("error", onDone, { once: true });
-    warmupImage.src = GALLERY_LIKE_ICON_FILLED_URL;
+    });
   });
 }
 
@@ -331,8 +351,8 @@ registerStartupTask(Promise.all(STATIC_IMAGE_PRELOAD_URLS.map((sourceUrl) => pre
 registerStartupTask(Promise.all(CRITICAL_ICON_PRELOAD_URLS.map((sourceUrl) => preloadImageUrl(sourceUrl))));
 registerStartupTask(Promise.all(STATIC_SOUND_PRELOAD_URLS.map((sourceUrl) => preloadAudioUrl(sourceUrl))));
 registerStartupTask((async () => {
-  await preloadImageUrl(GALLERY_LIKE_ICON_FILLED_URL);
-  await warmGalleryLikeIconDuringLoader();
+  await Promise.all(CRITICAL_ICON_PRELOAD_URLS.map((sourceUrl) => preloadImageUrl(sourceUrl)));
+  await warmImageUrlsDuringLoader(CRITICAL_ICON_PRELOAD_URLS);
 })());
 
 applyHeroUiTone("black");
