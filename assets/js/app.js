@@ -3,6 +3,7 @@
 const appLoaderEl = document.querySelector("#app-loader");
 let isAppLoaderHidden = false;
 const startupTasks = new Set();
+const preloadedImagePromises = new Map();
 const HERO_UI_TONE_STORAGE_KEY = "intesta_hero_ui_tone_v1";
 const STATIC_IMAGE_PRELOAD_URLS = [
   "./assets/images/logo.png",
@@ -78,21 +79,39 @@ function waitForImageLoad(imageEl) {
 }
 
 function preloadImageUrl(sourceUrl) {
-  return new Promise((resolve) => {
-    if (!sourceUrl) {
-      resolve();
-      return;
-    }
+  const normalizedUrl = String(sourceUrl || "").trim();
+  if (!normalizedUrl) {
+    return Promise.resolve();
+  }
+  if (preloadedImagePromises.has(normalizedUrl)) {
+    return preloadedImagePromises.get(normalizedUrl);
+  }
+  const preloadPromise = new Promise((resolve) => {
     const preloadImage = new Image();
-    const onDone = () => {
-      preloadImage.removeEventListener("load", onDone);
-      preloadImage.removeEventListener("error", onDone);
+    const onError = () => {
+      preloadImage.removeEventListener("load", onLoad);
+      preloadImage.removeEventListener("error", onError);
       resolve();
     };
-    preloadImage.addEventListener("load", onDone, { once: true });
-    preloadImage.addEventListener("error", onDone, { once: true });
-    preloadImage.src = sourceUrl;
+    const onLoad = async () => {
+      preloadImage.removeEventListener("load", onLoad);
+      preloadImage.removeEventListener("error", onError);
+      // Wait decode too, so the image is immediately paint-ready later.
+      if (typeof preloadImage.decode === "function") {
+        try {
+          await preloadImage.decode();
+        } catch (_error) {
+          // Ignore decode failures and continue.
+        }
+      }
+      resolve();
+    };
+    preloadImage.addEventListener("load", onLoad, { once: true });
+    preloadImage.addEventListener("error", onError, { once: true });
+    preloadImage.src = normalizedUrl;
   });
+  preloadedImagePromises.set(normalizedUrl, preloadPromise);
+  return preloadPromise;
 }
 
 function hideAppLoader() {
