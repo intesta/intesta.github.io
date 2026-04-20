@@ -82,6 +82,12 @@ body {
   overflow: hidden;
 }
 
+body.is-profile-popup-open {
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
+}
+
 b{
   font-weight: 700!important;
 }
@@ -1770,11 +1776,16 @@ b{
 }
 
 .profile-popup {
+  --profile-popup-target-square: min(72vw, 288px);
+  --profile-popup-card-width: min(
+    calc(100vw - (var(--site-side) * 2)),
+    calc(var(--profile-popup-target-square) + 36px)
+  );
   position: fixed;
   top: 0;
-  right: var(--site-side);
+  right: 0;
   bottom: 0;
-  left: var(--site-side);
+  left: 0;
   z-index: 220;
   background-color: #f8f8f8;
   background-image: radial-gradient(circle, rgb(235,235,235) var(--dot-radius), transparent var(--dot-radius));
@@ -1795,6 +1806,9 @@ b{
 }
 
 .profile-popup-body {
+  width: min(100vw, var(--site-max-width));
+  max-width: 100%;
+  margin: 0 auto;
   height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
@@ -1817,8 +1831,15 @@ b{
   z-index: 225;
   border: none;
   background: transparent;
-  padding: 4px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
   cursor: pointer;
+}
+
+.profile-popup:not(.is-legal-mode) .profile-popup-close {
+  right: auto;
+  left: calc((100vw + var(--profile-popup-card-width)) / 2 - 22px);
 }
 
 .profile-popup-close-icon {

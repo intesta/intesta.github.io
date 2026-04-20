@@ -10,6 +10,9 @@ const STATIC_IMAGE_PRELOAD_URLS = [
   "./assets/images/tomas.png",
   "./assets/images/casco.png",
   "./assets/images/alex.png",
+  "./assets/images/x-square.svg",
+  "./assets/images/x.svg",
+  "./assets/images/circle.svg",
   "./assets/images/base_casco_intesta.png",
   "./assets/images/AI.png",
   "./assets/images/chevrons-down.svg",
@@ -129,11 +132,23 @@ function hideAppLoader() {
 }
 
 async function bootLoader() {
+  // Let the rest of this script fully initialize UI/tasks first.
+  await Promise.resolve();
+
   if (document.readyState !== "complete") {
     await new Promise((resolve) => {
       window.addEventListener("load", resolve, { once: true });
     });
   }
+
+  if (document.fonts && typeof document.fonts.ready === "object") {
+    try {
+      await document.fonts.ready;
+    } catch (_error) {
+      // Ignore font readiness failures and continue.
+    }
+  }
+
   const images = Array.from(document.querySelectorAll("img"));
   await Promise.all(images.map((imageEl) => waitForImageLoad(imageEl)));
   while (startupTasks.size > 0) {
@@ -696,7 +711,7 @@ app.innerHTML = `
         </p>
         <p class="profile-contact">
           Per maggiori informazioni conttatami.<br>
-          <a href="tel:+393313809922">+39 331 380 99 22</a><br />
+          <a href="tel:+393313809922">+39 3313809922</a><br />
           <a href="mailto:intesta2026@gmail.com">intesta2026@gmail.com</a>
         </p>
       </article>
@@ -1013,7 +1028,7 @@ const popupContent = {
     </p>
     <p class="profile-contact">
       Per maggiori informazioni conttatami.<br>
-      <a href="tel:+393313809922">+39 331 380 99 22</a><br />
+      <a href="tel:+393313809922">+39 3313809922</a><br />
       <a href="mailto:intesta2026@gmail.com">intesta2026@gmail.com</a>
     </p>
   `,
@@ -1842,6 +1857,7 @@ function openProfilePopup(type) {
     popupEl.classList.add("is-open");
   });
   app.classList.add("is-popup-open");
+  document.body.classList.add("is-profile-popup-open");
   popupCloseEl.focus();
   syncChatVisibility();
 }
@@ -1872,6 +1888,7 @@ function openLegalPopup(pageKey) {
     popupEl.classList.add("is-open");
   });
   app.classList.add("is-popup-open");
+  document.body.classList.add("is-profile-popup-open");
   popupCloseEl.focus();
   syncChatVisibility();
 }
@@ -1892,6 +1909,7 @@ function closeProfilePopup() {
       currentPopupMode = "profile";
     }
     syncProfilePopupVariant("tomas");
+    document.body.classList.remove("is-profile-popup-open");
     popupCloseTimer = null;
     syncChatVisibility();
   }, POPUP_ANIMATION_MS);
@@ -2860,7 +2878,7 @@ function renderControls(controlType) {
       const footerContact = document.createElement("div");
       footerContact.className = "targets-contact-row";
       footerContact.innerHTML = `
-        <a href="tel:+393313809922">+39 331 380 99 22</a>
+        <a href="tel:+393313809922">+39 3313809922</a>
         <a href="mailto:intesta2026@gmail.com">intesta2026@gmail.com</a>
       `;
       controlsEl.append(footerContact);
