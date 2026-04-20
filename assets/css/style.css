@@ -2035,6 +2035,12 @@ b{
   white-space: pre-line;
 }
 
+.profile-bio a {
+  color: inherit;
+  text-decoration: none;
+  font: inherit;
+}
+
 .profile-contact {
   width: 100%;
   margin-top: 10px;
@@ -2252,6 +2258,12 @@ b{
   line-height: 1.25;
   color: var(--ui-soft-white);
 
+}
+
+.helmet-event-details-contact a {
+  color: inherit;
+  text-decoration: none;
+  font: inherit;
 }
 
 .helmet-event-details-subtitle {

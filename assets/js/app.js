@@ -1080,7 +1080,7 @@ app.innerHTML = `
           <img class="profile-photo" src="./assets/images/tomas.png" alt="Ritratto di Tomas Berardi" />
         </div>
         <p class="profile-bio">
-            <b>@tomas._.berardi<br><br>21 y.o. Faenza<br><br>Studente ISIA</b>: università di Design del prodotto e della comunicazione.<br><br>Ho bisogno del tuo aiuto per il mio progetto di tesi.<br>Ho realizzato questo sito e attività per te!
+            <b><a href="https://www.instagram.com/tomas._.berardi" target="_blank" rel="noopener noreferrer">@tomas._.berardi</a><br><br>21 y.o. Faenza<br><br>Studente ISIA</b>: università di Design del prodotto e della comunicazione.<br><br>Ho bisogno del tuo aiuto per il mio progetto di tesi.<br>Ho realizzato questo sito e attività per te!
         </p>
         <p class="profile-contact">
           Per maggiori informazioni conttatami.<br>
@@ -1291,7 +1291,7 @@ function openGalleryPreview(imageSrc, showAlexCaption = false, assetKey = "", li
   }
   syncGalleryLikeUi();
   galleryPreviewCaptionEl.hidden = !showAlexCaption;
-  galleryPreviewCaptionEl.innerHTML = showAlexCaption ? "<b>@alex.timoncini<br><br>22 y.o. Brisighella<br><br>Full-Stack Web Developer</b><br><br><a href=\"tel:+39393456200\">+39 393 456 200</a><br><a href=\"mailto:timoncinidev@gmail.com\">timoncinidev@gmail.com</a>" : "";
+  galleryPreviewCaptionEl.innerHTML = showAlexCaption ? "<b><a href=\"https://www.instagram.com/alex.timoncini/\" target=\"_blank\" rel=\"noopener noreferrer\">@alex.timoncini</a><br><br>22 y.o. Brisighella<br><br>Full-Stack Web Developer</b><br><br><a href=\"tel:+39393456200\">+39 393 456 200</a><br><a href=\"mailto:timoncinidev@gmail.com\">timoncinidev@gmail.com</a>" : "";
   galleryPreviewEl.hidden = false;
   galleryPreviewEl.classList.remove("is-closing");
   window.requestAnimationFrame(() => {
@@ -1407,7 +1407,7 @@ const popupContent = {
       <img class="profile-photo" src="./assets/images/tomas.png" alt="Ritratto di Tomas Berardi" />
     </div>
     <p class="profile-bio">
-        <b>@tomas._.berardi<br><br>21 y.o. Faenza<br><br>Studente ISIA</b>: università di Design del prodotto e della comunicazione.<br><br>Ho bisogno del tuo aiuto per il mio progetto di tesi.<br>Ho realizzato questo sito e attività per te!
+        <b><a href="https://www.instagram.com/tomas._.berardi" target="_blank" rel="noopener noreferrer">@tomas._.berardi</a><br><br>21 y.o. Faenza<br><br>Studente ISIA</b>: università di Design del prodotto e della comunicazione.<br><br>Ho bisogno del tuo aiuto per il mio progetto di tesi.<br>Ho realizzato questo sito e attività per te!
     </p>
     <p class="profile-contact">
       Per maggiori informazioni conttatami.<br>
@@ -1461,7 +1461,7 @@ const popupContent = {
               Se hai tra i 16-20 anni e vuoi partecipare da solo o con amici contattami.
             </p>
             <p class="helmet-event-details-contact">
-              @tomas._.berardi<br />
+              <a href="https://www.instagram.com/tomas._.berardi" target="_blank" rel="noopener noreferrer">@tomas._.berardi</a><br />
               +39 331 380 9922<br />
               intesta2026@gmail.com
             </p>
