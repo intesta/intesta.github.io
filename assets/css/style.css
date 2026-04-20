@@ -1817,12 +1817,8 @@ b{
 
 .profile-popup.is-helmet-event-mode {
   background-color: #f8f8f8;
-  background-image:
-    radial-gradient(circle, rgb(235,235,235) var(--dot-radius), transparent var(--dot-radius)),
-    url("./assets/images/casco.png");
-  background-size: var(--dot-grid-size) var(--dot-grid-size), cover;
-  background-repeat: repeat, no-repeat;
-  background-position: center, center;
+  background-image: radial-gradient(circle, rgb(235,235,235) var(--dot-radius), transparent var(--dot-radius));
+  background-size: var(--dot-grid-size) var(--dot-grid-size);
 }
 
 .profile-popup-body {
@@ -1840,11 +1836,11 @@ b{
 }
 
 .profile-popup.is-open .profile-popup-body {
-  transform: translateY(0) scale(1);
+  transform: none;
 }
 
 .profile-popup-close {
-  position: fixed;
+  position: absolute;
   top: 24px;
   right: calc(var(--site-side) + 36px);
   z-index: 225;
@@ -1858,7 +1854,7 @@ b{
 
 .profile-popup:not(.is-legal-mode) .profile-popup-close {
   right: auto;
-  left: calc((100vw + var(--profile-popup-card-width)) / 2 - 22px);
+  left: calc(50% + (var(--profile-popup-card-width) / 2) - 22px);
 }
 
 .profile-popup-close-icon {
@@ -1895,7 +1891,8 @@ b{
 
 .profile-popup.is-helmet-event-mode .profile-card {
   --target-square: min(72vw, 288px);
-  width: min(100%, calc(var(--target-square) + 36px));
+  width: 100%;
+  max-width: 320px;
   min-height: 100vh;
   min-height: 100svh;
   padding: 0;
@@ -2032,6 +2029,7 @@ b{
 
 .helmet-event-flow {
   width: 100%;
+  position: relative;
 }
 
 .helmet-event-screen {
@@ -2041,11 +2039,12 @@ b{
 }
 
 .helmet-event-screen--hero {
-  padding: 32px 12px 18px;
-  display: grid;
-  grid-template-rows: auto auto 1fr auto;
-  align-content: start;
-  background: transparent;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  height: 100svh;
+  min-height: 100svh;
+  padding: 32px 5px 18px;
 }
 
 .helmet-event-head {
@@ -2082,9 +2081,11 @@ b{
   color: #0f141b;
 }
 
-.helmet-event-photo-wrap {
+.helmet-event-media {
+  position: relative;
   width: 100%;
   margin-top: clamp(10px, 2.8svh, 16px);
+  align-self: start;
 }
 
 .helmet-event-photo {
@@ -2095,17 +2096,21 @@ b{
 }
 
 .helmet-event-time {
-  margin-top: auto;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  align-items: end;
+  align-items: flex-start;
+  pointer-events: none;
 }
 
 .helmet-event-time-col {
   margin: 0;
   display: grid;
   gap: 4px;
-  font-size: clamp(4.6rem, 18vw, 6.1rem);
+  font-size: 80px;
   line-height: 0.84;
   letter-spacing: -0.03em;
   color: #000;
@@ -2132,23 +2137,119 @@ b{
   left: 50%;
   right: auto;
   bottom: 50px;
-  z-index: 226;
+  z-index: 1;
   transform: translateX(-50%);
 }
 
+.profile-popup.is-helmet-event-mode .profile-popup-close {
+  z-index: 1;
+}
+
 .helmet-event-screen--details {
-  padding: 22px 14px 34px;
+  position: relative;
+  z-index: 2;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  min-height: 100svh;
+  margin-top: 0;
+  padding: 16px 24px 34px;
+  box-sizing: border-box;
   display: grid;
   align-content: start;
-  background: #f8f8f8;
+  border-top-left-radius: 30px;
+  border-top-right-radius: 30px;
+  background: #1A1A1A;
+  overflow: hidden;
+}
+
+.helmet-event-details-content {
+  width: min(100%, 450px);
+  margin: 0 auto;
+  display: grid;
+  gap: 36px;
+}
+
+.helmet-event-details-topline {
+  margin: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  line-height: 1.15;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.005em;
+}
+
+.helmet-event-details-block {
+  display: grid;
+  gap: 10px;
+}
+
+.helmet-event-details-title {
+  margin: 40px 0 0;
+  font-size: 24px;
+  line-height: 0.98;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: #fff;
+
 }
 
 .helmet-event-details-copy {
   margin: 0;
-  font-size: 15px;
-  line-height: 1.35;
-  color: #1d242d;
+  font-size: 20px;
+  line-height: 1.45;
+  font-weight: 400;
+  color: #fff;
+
 }
+
+.helmet-event-details-contact {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.25;
+  color: #fff;
+
+}
+
+.helmet-event-details-subtitle {
+  margin: 0 0 20px;
+  font-size: 13px;
+  line-height: 1.1;
+  color: #fff;
+
+}
+
+.helmet-event-timeline {
+  display: grid;
+  gap: 16px;
+}
+
+.helmet-event-timeline-row {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  column-gap: 10px;
+}
+
+.helmet-event-timeline-time {
+  font-size: 20px;
+  line-height: 1.1;
+  font-weight: 400;
+  color: #fff;
+}
+
+.helmet-event-timeline-desc {
+  font-size: 16px;
+  line-height: 1.45;
+  font-weight: 400;
+  color: #fff;
+}
+
 
 body.admin-mode {
   overflow: auto;

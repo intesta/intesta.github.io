@@ -1041,26 +1041,74 @@ const popupContent = {
           <p class="helmet-event-place">Parco Bucci Faenza</p>
           <p class="helmet-event-address">Entrata piazzale Pancrazi</p>
         </header>
-        <p class="helmet-event-title">EVENTO COMPETITIVO<br />DESIGN DI GRUPPO</p>
-        <div class="helmet-event-time">
-          <p class="helmet-event-time-col helmet-event-time-col--left">
-            <span>09</span>
-            <span>05</span>
-            <span>26</span>
-          </p>
-          <p class="helmet-event-time-col helmet-event-time-col--right">
-            <span>15</span>
-            <span>00</span>
-          </p>
+        <p class="helmet-event-title">EVENTO DESIGN<br />DI GRUPPO</p>
+        <div class="helmet-event-media">
+          <img class="helmet-event-photo" src="./assets/images/casco.png" alt="Immagine casco evento" />
+          <div class="helmet-event-time">
+            <p class="helmet-event-time-col helmet-event-time-col--left">
+              <span>09</span>
+              <span>05</span>
+              <span>26</span>
+            </p>
+            <p class="helmet-event-time-col helmet-event-time-col--right">
+              <span>15</span>
+              <span>00</span>
+            </p>
+          </div>
         </div>
         <button class="targets-jump-btn helmet-event-jump" id="helmet-event-jump" type="button" aria-label="Scorri in basso nel popup casco">
           <img class="icon-svg icon-svg--down" src="./assets/images/chevrons-down.svg" alt="" aria-hidden="true" />
         </button>
       </section>
       <section class="helmet-event-screen helmet-event-screen--details" id="helmet-event-details">
-        <p class="helmet-event-details-copy">
-          L'evento continua nella sezione sottostante. Scorri o usa il doppio chevron per vedere tutti i dettagli.
-        </p>
+        <div class="helmet-event-details-content">
+          <p class="helmet-event-details-topline">
+            <span>Premio</span>
+            <span>Bike Gadget Ltd.</span>
+          </p>
+
+          <section class="helmet-event-details-block">
+            <h3 class="helmet-event-details-title">Ci incontriamo?</h3>
+            <p class="helmet-event-details-copy">
+              Un invito a ragionare sul tema della realizzazione di un casco che ci rappresenti.
+            </p>
+          </section>
+
+          <section class="helmet-event-details-block">
+            <h3 class="helmet-event-details-title">Come partecipare?</h3>
+            <p class="helmet-event-details-copy">
+              Se hai tra i 16-20 anni e vuoi partecipare da solo o con amici contattami.
+            </p>
+            <p class="helmet-event-details-contact">
+              @tomas._.berardi<br />
+              +39 331 380 9922<br />
+              intesta2026@gmail.com
+            </p>
+          </section>
+
+          <section class="helmet-event-details-block">
+            <h3 class="helmet-event-details-title">Orario-Attività</h3>
+            <p class="helmet-event-details-subtitle">Per i piu organizzati</p>
+            <div class="helmet-event-timeline">
+              <p class="helmet-event-timeline-row">
+                <span class="helmet-event-timeline-time">15:00</span>
+                <span class="helmet-event-timeline-desc">-Ci conosciamo</span>
+              </p>
+              <p class="helmet-event-timeline-row">
+                <span class="helmet-event-timeline-time">16:00</span>
+                <span class="helmet-event-timeline-desc">-Brainstorming tutti insieme</span>
+              </p>
+              <p class="helmet-event-timeline-row">
+                <span class="helmet-event-timeline-time">17:00</span>
+                <span class="helmet-event-timeline-desc">-Realizziamo un modello/disegno/AI image della vostra idea di gruppo o individuale</span>
+              </p>
+              <p class="helmet-event-timeline-row">
+                <span class="helmet-event-timeline-time">18:00</span>
+                <span class="helmet-event-timeline-desc">-Votazione dell'idea migliore e premiazione!</span>
+              </p>
+            </div>
+          </section>
+        </div>
       </section>
     </article>
   `
