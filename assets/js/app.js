@@ -1208,7 +1208,7 @@ function openGalleryPreview(imageSrc, showAlexCaption = false, assetKey = "", li
   }
   syncGalleryLikeUi();
   galleryPreviewCaptionEl.hidden = !showAlexCaption;
-  galleryPreviewCaptionEl.innerHTML = showAlexCaption ? "<b>@alex.timoncini<br><br>22 y.o. Brisighella<br><br>Full-Stack Web Developer</b><br><br>+39 393 456 200<br>timoncinidev@gmail.com" : "";
+  galleryPreviewCaptionEl.innerHTML = showAlexCaption ? "<b>@alex.timoncini<br><br>22 y.o. Brisighella<br><br>Full-Stack Web Developer</b><br><br><a href=\"tel:+39393456200\">+39 393 456 200</a><br><a href=\"mailto:timoncinidev@gmail.com\">timoncinidev@gmail.com</a>" : "";
   galleryPreviewEl.hidden = false;
   galleryPreviewEl.classList.remove("is-closing");
   window.requestAnimationFrame(() => {
@@ -2405,10 +2405,13 @@ function syncAiChatDocking() {
   }
 
   const footerTopPx = Math.min(...footerEls.map((el) => el.getBoundingClientRect().top));
-  const chatRect = chatRootEl.getBoundingClientRect();
+  const viewportBottomPx = window.visualViewport
+    ? window.visualViewport.offsetTop + window.visualViewport.height
+    : window.innerHeight;
+  const chatBottomWithoutShiftPx = viewportBottomPx - 50;
   const minGapPx = 12;
-  const overlapPx = (chatRect.bottom + minGapPx) - footerTopPx;
-  const maxShiftPx = Math.max(0, chatRect.top - 8);
+  const overlapPx = (chatBottomWithoutShiftPx + minGapPx) - footerTopPx;
+  const maxShiftPx = Math.max(0, viewportBottomPx - 90);
   const shiftPx = Math.max(0, Math.min(maxShiftPx, overlapPx));
 
   chatRootEl.classList.toggle("is-docked", shiftPx > 0.5);
@@ -2750,7 +2753,7 @@ function renderControls(controlType) {
                   <p class="helmet-send-popup-title" id="helmet-send-popup-text-title">vuoi inviare la descrizione?</p>
                   <label class="helmet-send-popup-consent" for="helmet-send-popup-text-consent">
                     <input type="checkbox" class="helmet-send-popup-consent-input" id="helmet-send-popup-text-consent" />
-                    <span class="helmet-send-popup-consent-copy">accetto e dichiaro di aver letto l'informativa sulla privacy</span>
+                    <span class="helmet-send-popup-consent-copy">accetto e dichiaro di aver letto l'<a class="helmet-send-popup-privacy-link" href="#" data-legal-page="PR">informativa sulla privacy</a></span>
                   </label>
                   <div class="helmet-send-popup-actions">
                     <button type="button" class="helmet-send-popup-choice helmet-send-popup-choice--cancel" id="helmet-send-popup-text-cancel" aria-label="Annulla invio descrizione">
@@ -2800,7 +2803,7 @@ function renderControls(controlType) {
                   <p class="helmet-send-popup-title" id="helmet-send-popup-image-title">vuoi inviare l'immagine?<br />potrebbe essere mostrata nel catalogo del sito</p>
                   <label class="helmet-send-popup-consent" for="helmet-send-popup-image-consent">
                     <input type="checkbox" class="helmet-send-popup-consent-input" id="helmet-send-popup-image-consent" />
-                    <span class="helmet-send-popup-consent-copy">accetto e dichiaro di aver letto l'informativa sulla privacy</span>
+                    <span class="helmet-send-popup-consent-copy">accetto e dichiaro di aver letto l'<a class="helmet-send-popup-privacy-link" href="#" data-legal-page="PR">informativa sulla privacy</a></span>
                   </label>
                   <div class="helmet-send-popup-actions">
                     <button type="button" class="helmet-send-popup-choice helmet-send-popup-choice--cancel" id="helmet-send-popup-image-cancel" aria-label="Annulla invio immagine">
@@ -2921,6 +2924,7 @@ function renderControls(controlType) {
     const sendPopupImageConfirmEl = targets.querySelector("#helmet-send-popup-image-confirm");
     const sendPopupImageCancelEl = targets.querySelector("#helmet-send-popup-image-cancel");
     const sendPopupImageConsentEl = targets.querySelector("#helmet-send-popup-image-consent");
+    const sendPopupPrivacyLinks = targets.querySelectorAll(".helmet-send-popup-privacy-link");
     const removePopupImageEl = targets.querySelector("#helmet-remove-popup-image");
     const removePopupImageConfirmEl = targets.querySelector("#helmet-remove-popup-image-confirm");
     const removePopupImageCancelEl = targets.querySelector("#helmet-remove-popup-image-cancel");
@@ -3113,6 +3117,18 @@ function renderControls(controlType) {
         returnFocusEl.focus();
       }
     };
+
+    sendPopupPrivacyLinks.forEach((linkEl) => {
+      if (!(linkEl instanceof HTMLAnchorElement)) {
+        return;
+      }
+      linkEl.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const legalPage = String(linkEl.dataset.legalPage || "PR");
+        openLegalPopup(legalPage || "PR");
+      });
+    });
 
     const applyLockedState = (contributionBundle) => {
       if (contributionBundle && typeof contributionBundle === "object") {

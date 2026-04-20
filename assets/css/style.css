@@ -984,6 +984,11 @@ b{
   transition: opacity 220ms var(--motion-ease), transform 220ms var(--motion-ease);
 }
 
+.gallery-preview-caption a {
+  color: inherit;
+  text-decoration: none;
+}
+
 .gallery-preview.is-open .gallery-preview-backdrop {
   opacity: 1;
 }
@@ -1253,6 +1258,12 @@ b{
 
 .helmet-send-popup-consent-copy {
   overflow-wrap: anywhere;
+}
+
+.helmet-send-popup-privacy-link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .helmet-send-popup-actions {
