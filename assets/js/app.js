@@ -2185,14 +2185,15 @@ async function appendAssistantMessageTypewriter(text) {
   window.requestAnimationFrame(autoScrollLoop);
 
   const fullText = text || "";
+  let progressiveText = "";
   for (let i = 0; i < fullText.length; i += 1) {
-    msg.textContent += fullText[i];
+    progressiveText += fullText[i];
+    msg.innerHTML = renderAssistantMessageHtml(progressiveText);
     scrollAiChatToBottom(msg);
     await sleep(16);
   }
 
   keepAutoScroll = false;
-  msg.innerHTML = renderAssistantMessageHtml(fullText);
   msg.classList.remove("ai-chat-msg--typewriter");
   scrollAiChatToBottom(msg);
   return msg;

@@ -2052,6 +2052,9 @@ b{
 .helmet-event-flow {
   width: 100%;
   position: relative;
+  --helmet-details-overlap: 50px;
+  --helmet-jump-gap: 2px;
+  --helmet-jump-size: 52px;
 }
 
 .helmet-event-screen {
@@ -2158,13 +2161,14 @@ b{
   position: fixed;
   left: 50%;
   right: auto;
-  bottom: 50px;
-  z-index: 1;
+  top: calc(100svh - var(--helmet-details-overlap) - var(--helmet-jump-gap) - var(--helmet-jump-size));
+  bottom: auto;
+  z-index: 3;
   transform: translateX(-50%);
 }
 
 .profile-popup.is-helmet-event-mode .profile-popup-close {
-  z-index: 230;
+  z-index: 1;
   pointer-events: auto;
 }
 
@@ -2175,7 +2179,7 @@ b{
   margin-left: calc(50% - 50vw);
   margin-right: calc(50% - 50vw);
   min-height: 100svh;
-  margin-top: -50px;
+  margin-top: calc(-1 * var(--helmet-details-overlap));
   padding: 16px 24px 34px;
   box-sizing: border-box;
   display: grid;
