@@ -2163,6 +2163,7 @@ b{
   border-top-right-radius: 30px;
   background: #1A1A1A;
   overflow: hidden;
+  top: -50px;
 }
 
 .helmet-event-details-content {
