@@ -820,7 +820,7 @@ const TARGETS_SLIDE_INDEX = 4;
 const POPUP_ANIMATION_MS = 320;
 const CHOICE_ANIMATION_MS = 340;
 const CHOICE_SWEEP_BLUR_PX = 1.8;
-const HERO_CAROUSEL_INTERVAL_MS = 8000;
+const HERO_CAROUSEL_INTERVAL_MS = 2500;
 const LAST_SLIDE_REACHED_STORAGE_KEY = "intesta_last_slide_reached_v1";
 
 function hasReachedLastSlideInStorage() {
