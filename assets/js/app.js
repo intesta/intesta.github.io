@@ -27,14 +27,14 @@ const STATIC_IMAGE_PRELOAD_URLS = [
 ];
 
 function normalizeHeroUiTone(value) {
-  return value === "black" ? "black" : "white";
+  return value === "white" ? "white" : "black";
 }
 
 function getStoredHeroUiTone() {
   try {
     return normalizeHeroUiTone(window.localStorage.getItem(HERO_UI_TONE_STORAGE_KEY) || "");
   } catch (_error) {
-    return "white";
+    return "black";
   }
 }
 
@@ -1155,13 +1155,18 @@ const slideEls = slides.map((slideData) => {
 
 const heroLayerAEl = slideEls[0]?.querySelector("#hero-layer-a");
 const heroLayerBEl = slideEls[0]?.querySelector("#hero-layer-b");
-let heroBackgroundSources = ["./assets/images/casco.png"];
+const heroCarouselEl = slideEls[0]?.querySelector(".hero-carousel");
+let heroBackgroundSources = [];
 let heroActiveLayerIsA = true;
 let heroCarouselIndex = 0;
 let heroCarouselTimerId = null;
 
 function setHeroLayerSource(layerEl, sourceUrl) {
-  if (!(layerEl instanceof HTMLElement) || !sourceUrl) {
+  if (!(layerEl instanceof HTMLElement)) {
+    return;
+  }
+  if (!sourceUrl) {
+    layerEl.style.backgroundImage = "none";
     return;
   }
   layerEl.style.backgroundImage = `url("${sourceUrl.replace(/"/g, "%22")}")`;
@@ -1171,16 +1176,20 @@ function applyHeroBackgroundSources(sourceUrls) {
   const nextSources = Array.isArray(sourceUrls)
     ? sourceUrls.filter((sourceUrl, index, arr) => Boolean(sourceUrl) && arr.indexOf(sourceUrl) === index)
     : [];
-  heroBackgroundSources = nextSources.length > 0 ? nextSources : ["./assets/images/casco.png"];
+  heroBackgroundSources = nextSources;
   heroCarouselIndex = 0;
   heroActiveLayerIsA = true;
-  setHeroLayerSource(heroLayerAEl, heroBackgroundSources[0]);
-  setHeroLayerSource(heroLayerBEl, heroBackgroundSources[0]);
+  const firstSource = heroBackgroundSources[0] || "";
+  setHeroLayerSource(heroLayerAEl, firstSource);
+  setHeroLayerSource(heroLayerBEl, firstSource);
   if (heroLayerAEl instanceof HTMLElement) {
-    heroLayerAEl.classList.add("is-active");
+    heroLayerAEl.classList.toggle("is-active", Boolean(firstSource));
   }
   if (heroLayerBEl instanceof HTMLElement) {
     heroLayerBEl.classList.remove("is-active");
+  }
+  if (heroCarouselEl instanceof HTMLElement) {
+    heroCarouselEl.classList.toggle("has-media", Boolean(firstSource));
   }
 }
 
@@ -1519,9 +1528,8 @@ registerStartupTask((async () => {
     .filter((item) => item && typeof item === "object" && !item.isAlex)
     .map((item) => (typeof item.src === "string" ? item.src : ""))
     .filter((item) => Boolean(item));
-  const nextSources = heroSources.length > 0 ? heroSources : ["./assets/images/casco.png"];
-  await Promise.all(nextSources.map((sourceUrl) => preloadImageUrl(sourceUrl)));
-  applyHeroBackgroundSources(nextSources);
+  await Promise.all(heroSources.map((sourceUrl) => preloadImageUrl(sourceUrl)));
+  applyHeroBackgroundSources(heroSources);
   startHeroCarousel();
 })());
 

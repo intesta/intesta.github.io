@@ -28,11 +28,15 @@
   --dot-grid-size: 24px;
   --dot-radius: 2px;
   --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
-  --hero-ui-filter: brightness(0) invert(1);
+  --hero-ui-filter: none;
 }
 
 :root[data-hero-ui-tone="black"] {
   --hero-ui-filter: none;
+}
+
+:root[data-hero-ui-tone="white"] {
+  --hero-ui-filter: brightness(0) invert(1);
 }
 
 body.is-app-loading {
@@ -183,13 +187,17 @@ b{
 .hero-carousel {
   position: absolute;
   inset: 0;
-  background: #000;
+  background: transparent;
 }
 
 .hero-carousel::after {
   content: "";
   position: absolute;
   inset: 0;
+  background: transparent;
+}
+
+.hero-carousel.has-media::after {
   background: rgba(0, 0, 0, 0.28);
 }
 
@@ -1383,7 +1391,7 @@ b{
 }
 
 .target-image--helmet {
-  transform: scale(1.9) translateX(-3px);
+  transform: scale(0.8) translateX(-3px);
   transform-origin: center;
 }
 
