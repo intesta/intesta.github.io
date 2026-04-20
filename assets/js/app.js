@@ -41,12 +41,12 @@ const HELMET_ACTION_SOUND_URL = "./assets/sounds/impactMetal_001.ogg";
 const AI_PANEL_SOUND_URL = "./assets/sounds/impactMetal_003.ogg";
 const GALLERY_HEART_SOUND_URL = "./assets/sounds/laserSmall_004.ogg";
 const POPUP_CLOSE_SOUND_URL = "./assets/sounds/impactMetal_004.ogg";
-const NAV_DOWN_SOUND_VOLUME = 0.55;
-const CHOICE_SOUND_VOLUME = 0.62;
-const HELMET_ACTION_SOUND_VOLUME = 0.62;
-const AI_PANEL_SOUND_VOLUME = 0.62;
+const NAV_DOWN_SOUND_VOLUME = 0.83;
+const CHOICE_SOUND_VOLUME = 0.31;
+const HELMET_ACTION_SOUND_VOLUME = 0.93;
+const AI_PANEL_SOUND_VOLUME = 0.93;
 const GALLERY_HEART_SOUND_VOLUME = 0.56;
-const POPUP_CLOSE_SOUND_VOLUME = 0.62;
+const POPUP_CLOSE_SOUND_VOLUME = 0.93;
 const uiSoundCache = new Map();
 
 function getUiSound(soundKey, sourceUrl, volume = 1) {
@@ -1035,7 +1035,6 @@ app.innerHTML = `
         <button class="ai-chat-close" id="ai-chat-close" type="button" aria-label="Chiudi chat">×</button>
       </header>
       <div class="ai-chat-messages" id="ai-chat-messages"></div>
-      <div class="ai-chat-quick" id="ai-chat-quick" aria-label="Domande rapide suggerite"></div>
       <form class="ai-chat-form" id="ai-chat-form">
         <input
           class="ai-chat-input"
@@ -1074,18 +1073,9 @@ const chatLauncherEl = app.querySelector("#ai-chat-launcher");
 const chatPanelEl = app.querySelector("#ai-chat-panel");
 const chatCloseEl = app.querySelector("#ai-chat-close");
 const chatMessagesEl = app.querySelector("#ai-chat-messages");
-const chatQuickEl = app.querySelector("#ai-chat-quick");
 const chatFormEl = app.querySelector("#ai-chat-form");
 const chatInputEl = app.querySelector("#ai-chat-input");
 const chatSendEl = app.querySelector("#ai-chat-send");
-const CHAT_QUICK_PROMPTS = [
-  "Come invio la foto del casco?",
-  "Che formati file posso caricare?",
-  "Dammi 5 idee creative per il casco",
-  "Dove trovo i contatti?",
-  "Riassumi il progetto Intesta in 4 punti"
-];
-const chatQuickChipEls = [];
 const legalDockEl = document.querySelector(".legal-dock");
 const legalLinkEls = legalDockEl ? Array.from(legalDockEl.querySelectorAll(".legal-icon")) : [];
 
@@ -1612,10 +1602,91 @@ function startHeroCarousel() {
 applyHeroBackgroundSources([]);
 startHeroCarousel();
 
+function escapeChatHtml(value) {
+  return String(value || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function formatAssistantInlineHtml(value) {
+  const escaped = escapeChatHtml(value);
+  return escaped
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/__(.+?)__/g, "<strong>$1</strong>");
+}
+
+function renderAssistantMessageHtml(text) {
+  const normalized = String(text || "").replace(/\r\n?/g, "\n").trim();
+  if (!normalized) {
+    return "";
+  }
+
+  const lines = normalized.split("\n");
+  const htmlParts = [];
+  let activeListTag = "";
+  const closeList = () => {
+    if (!activeListTag) {
+      return;
+    }
+    htmlParts.push(`</${activeListTag}>`);
+    activeListTag = "";
+  };
+
+  lines.forEach((rawLine) => {
+    const line = rawLine.trim();
+    if (!line) {
+      closeList();
+      return;
+    }
+
+    const unorderedMatch = line.match(/^[-*]\s+(.+)$/);
+    if (unorderedMatch) {
+      if (activeListTag !== "ul") {
+        closeList();
+        activeListTag = "ul";
+        htmlParts.push("<ul class=\"ai-chat-list\">");
+      }
+      htmlParts.push(`<li>${formatAssistantInlineHtml(unorderedMatch[1])}</li>`);
+      return;
+    }
+
+    const orderedMatch = line.match(/^\d+[\.\)]\s+(.+)$/);
+    if (orderedMatch) {
+      if (activeListTag !== "ol") {
+        closeList();
+        activeListTag = "ol";
+        htmlParts.push("<ol class=\"ai-chat-list\">");
+      }
+      htmlParts.push(`<li>${formatAssistantInlineHtml(orderedMatch[1])}</li>`);
+      return;
+    }
+
+    closeList();
+
+    if (/^[^.!?]{1,72}:$/.test(line)) {
+      const titleText = line.endsWith(":") ? line.slice(0, -1) : line;
+      htmlParts.push(`<p class="ai-chat-msg-title"><strong>${formatAssistantInlineHtml(titleText)}</strong></p>`);
+      return;
+    }
+
+    htmlParts.push(`<p>${formatAssistantInlineHtml(line)}</p>`);
+  });
+
+  closeList();
+  return htmlParts.join("");
+}
+
 function appendChatMessage(role, text) {
-  const msg = document.createElement("p");
+  const msg = document.createElement("div");
   msg.className = `ai-chat-msg ai-chat-msg--${role}`;
-  msg.textContent = text;
+  if (role === "assistant") {
+    msg.innerHTML = renderAssistantMessageHtml(text);
+  } else {
+    msg.textContent = text;
+  }
   chatMessagesEl.append(msg);
   scrollAiChatToBottom(msg);
   return msg;
@@ -2048,9 +2119,6 @@ function scrollAiChatToBottom(anchorEl) {
     return;
   }
   const run = () => {
-    if (anchorEl && anchorEl.parentElement !== chatMessagesEl) {
-      return;
-    }
     chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
   };
   run();
@@ -2064,7 +2132,7 @@ function showTypingIndicator() {
   if (typingIndicatorEl) {
     return;
   }
-  const msg = document.createElement("p");
+  const msg = document.createElement("div");
   msg.className = "ai-chat-msg ai-chat-msg--assistant ai-chat-msg--typing";
   msg.setAttribute("aria-label", "Assistente sta scrivendo");
   msg.innerHTML = `
@@ -2090,7 +2158,7 @@ async function appendAssistantMessageTypewriter(text) {
   if (msg) {
     typingIndicatorEl = null;
   } else {
-    msg = document.createElement("p");
+    msg = document.createElement("div");
     msg.className = "ai-chat-msg ai-chat-msg--assistant ai-chat-msg--typewriter ai-chat-msg--from-dots";
     msg.textContent = "";
     chatMessagesEl.append(msg);
@@ -2103,6 +2171,8 @@ async function appendAssistantMessageTypewriter(text) {
     msg.classList.add("is-expanding");
   });
   await sleep(130);
+  msg.classList.remove("is-expanding");
+  msg.classList.remove("ai-chat-msg--from-dots");
 
   let keepAutoScroll = true;
   const autoScrollLoop = () => {
@@ -2122,9 +2192,8 @@ async function appendAssistantMessageTypewriter(text) {
   }
 
   keepAutoScroll = false;
+  msg.innerHTML = renderAssistantMessageHtml(fullText);
   msg.classList.remove("ai-chat-msg--typewriter");
-  msg.classList.remove("ai-chat-msg--from-dots");
-  msg.classList.remove("is-expanding");
   scrollAiChatToBottom(msg);
   return msg;
 }
@@ -2133,25 +2202,6 @@ function setChatPendingState(pending) {
   isChatRequestPending = pending;
   chatInputEl.disabled = pending;
   chatSendEl.disabled = pending;
-  chatQuickChipEls.forEach((chipEl) => {
-    chipEl.disabled = pending;
-  });
-}
-
-function mountChatQuickChips() {
-  if (!(chatQuickEl instanceof HTMLElement)) {
-    return;
-  }
-  chatQuickEl.innerHTML = "";
-  CHAT_QUICK_PROMPTS.forEach((promptText) => {
-    const chipEl = document.createElement("button");
-    chipEl.type = "button";
-    chipEl.className = "ai-chat-chip";
-    chipEl.dataset.chatPrompt = promptText;
-    chipEl.textContent = promptText;
-    chatQuickEl.append(chipEl);
-    chatQuickChipEls.push(chipEl);
-  });
 }
 
 async function submitChatMessage(rawMessage) {
@@ -3598,22 +3648,6 @@ chatCloseEl.addEventListener("click", () => {
   playPopupCloseSound();
   closeChatPanel();
 });
-
-mountChatQuickChips();
-if (chatQuickEl instanceof HTMLElement) {
-  chatQuickEl.addEventListener("click", (event) => {
-    const targetEl = event.target instanceof Element ? event.target.closest(".ai-chat-chip") : null;
-    if (!(targetEl instanceof HTMLButtonElement)) {
-      return;
-    }
-    const promptText = String(targetEl.dataset.chatPrompt || targetEl.textContent || "").trim();
-    if (!promptText) {
-      return;
-    }
-    chatInputEl.value = promptText;
-    void submitChatMessage(promptText);
-  });
-}
 
 chatFormEl.addEventListener("submit", (event) => {
   event.preventDefault();
