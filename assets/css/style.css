@@ -316,7 +316,7 @@ b{
   -webkit-overflow-scrolling: touch;
   pointer-events: auto;
   padding: 0 var(--site-side);
-  padding-bottom: 180px;
+  padding-bottom: max(72px, calc(24px + env(safe-area-inset-bottom, 0px)));
   scroll-snap-type: y proximity;
   box-sizing: border-box;
 }
@@ -1588,14 +1588,15 @@ b{
 }
 
 .ai-chat {
+  --ai-dock-shift: 0px;
   position: fixed;
   left: 50%;
   bottom: 50px;
-  transform: translateX(-50%);
+  transform: translateX(-50%) translateY(calc(-1 * var(--ai-dock-shift)));
   z-index: 80;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 220ms var(--motion-ease);
+  transition: opacity 220ms var(--motion-ease), transform 180ms var(--motion-ease);
 }
 
 .ai-chat.is-available {
@@ -2168,7 +2169,7 @@ b{
 }
 
 .profile-popup.is-helmet-event-mode .profile-popup-close {
-  z-index: 1;
+  z-index: 2;
   pointer-events: auto;
 }
 

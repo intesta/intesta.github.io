@@ -2384,6 +2384,26 @@ function openChatPanel() {
   chatInputEl.focus();
 }
 
+function syncAiChatDocking() {
+  const shouldManageDock = current === TARGETS_SLIDE_INDEX && popupEl.hidden && hasTargetsScrolledDown;
+  if (!shouldManageDock) {
+    chatRootEl.classList.remove("is-docked");
+    chatRootEl.style.setProperty("--ai-dock-shift", "0px");
+    return;
+  }
+
+  const remaining = Math.max(0, controlsEl.scrollHeight - controlsEl.scrollTop - controlsEl.clientHeight);
+  const footerContactEl = controlsEl.querySelector(".targets-contact-row");
+  const inlineLegalEl = controlsEl.querySelector(".legal-dock.is-inline-footer");
+  const footerBlockHeight = (footerContactEl instanceof HTMLElement ? footerContactEl.offsetHeight : 0)
+    + (inlineLegalEl instanceof HTMLElement ? inlineLegalEl.offsetHeight : 0);
+  const reserveSpace = Math.max(110, footerBlockHeight - 4);
+  const shiftPx = Math.max(0, reserveSpace - remaining);
+
+  chatRootEl.classList.toggle("is-docked", shiftPx > 0.5);
+  chatRootEl.style.setProperty("--ai-dock-shift", `${shiftPx.toFixed(1)}px`);
+}
+
 function syncChatVisibility() {
   const isLastSlide = current === TARGETS_SLIDE_INDEX;
   const shouldShow = isLastSlide && popupEl.hidden && hasTargetsScrolledDown;
@@ -2398,6 +2418,7 @@ function syncChatVisibility() {
   if (!shouldShow) {
     closeChatPanel();
   }
+  syncAiChatDocking();
 }
 
 function openProfilePopup(type) {
@@ -2844,6 +2865,7 @@ function renderControls(controlType) {
       if (controlsEl.scrollTop > 10) {
         activateTargetsArea();
       }
+      syncAiChatDocking();
     };
     controlsEl.onscroll = onTargetsScroll;
     window.setTimeout(onTargetsScroll, 40);
