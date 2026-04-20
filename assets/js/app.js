@@ -766,6 +766,7 @@ const subtitleEl = app.querySelector("#slide-subtitle");
 const announcerEl = app.querySelector("#slide-announcer");
 const controlsEl = app.querySelector("#slide-controls");
 const popupEl = app.querySelector("#profile-popup");
+const popupBodyEl = app.querySelector(".profile-popup-body");
 const popupCloseEl = app.querySelector("#profile-popup-close");
 const popupCardEl = app.querySelector(".profile-card");
 const defaultPopupCloseMarkup = popupCloseEl instanceof HTMLElement ? popupCloseEl.innerHTML : "";
@@ -794,6 +795,7 @@ if (
   !announcerEl ||
   !controlsEl ||
   !popupEl ||
+  !popupBodyEl ||
   !popupCloseEl ||
   !popupCardEl ||
   !galleryPreviewEl ||
@@ -1033,27 +1035,33 @@ const popupContent = {
     </p>
   `,
   casco: `
-    <article class="helmet-event-card" aria-label="Evento casco">
-      <header class="helmet-event-head">
-        <p class="helmet-event-place">Parco Bucci Faenza</p>
-        <p class="helmet-event-address">Entrata piazzale Pancrazi</p>
-      </header>
-      <p class="helmet-event-title">EVENTO COMPETITIVO<br />DESIGN DI GRUPPO</p>
-      <div class="helmet-event-photo-wrap">
-        <img class="helmet-event-photo" src="./assets/images/casco.png" alt="Immagine casco" />
-      </div>
-      <div class="helmet-event-time">
-        <p class="helmet-event-time-col helmet-event-time-col--left">
-          <span>09</span>
-          <span>05</span>
-          <span>26</span>
+    <article class="helmet-event-flow" aria-label="Evento casco">
+      <section class="helmet-event-screen helmet-event-screen--hero">
+        <header class="helmet-event-head">
+          <p class="helmet-event-place">Parco Bucci Faenza</p>
+          <p class="helmet-event-address">Entrata piazzale Pancrazi</p>
+        </header>
+        <p class="helmet-event-title">EVENTO COMPETITIVO<br />DESIGN DI GRUPPO</p>
+        <div class="helmet-event-time">
+          <p class="helmet-event-time-col helmet-event-time-col--left">
+            <span>09</span>
+            <span>05</span>
+            <span>26</span>
+          </p>
+          <p class="helmet-event-time-col helmet-event-time-col--right">
+            <span>15</span>
+            <span>00</span>
+          </p>
+        </div>
+        <button class="targets-jump-btn helmet-event-jump" id="helmet-event-jump" type="button" aria-label="Scorri in basso nel popup casco">
+          <img class="icon-svg icon-svg--down" src="./assets/images/chevrons-down.svg" alt="" aria-hidden="true" />
+        </button>
+      </section>
+      <section class="helmet-event-screen helmet-event-screen--details" id="helmet-event-details">
+        <p class="helmet-event-details-copy">
+          L'evento continua nella sezione sottostante. Scorri o usa il doppio chevron per vedere tutti i dettagli.
         </p>
-        <p class="helmet-event-time-col helmet-event-time-col--right">
-          <span>15</span>
-          <span>00</span>
-        </p>
-      </div>
-      <img class="helmet-event-chevron" src="./assets/images/chevrons-down.svg" alt="" aria-hidden="true" />
+      </section>
     </article>
   `
 };
@@ -1066,6 +1074,24 @@ function syncProfilePopupVariant(type) {
   popupEl.classList.toggle("is-helmet-event-mode", isHelmetVariant);
   popupCloseEl.innerHTML = defaultPopupCloseMarkup;
   popupCloseEl.setAttribute("aria-label", "Chiudi popup profilo");
+}
+
+function wireHelmetPopupJump() {
+  if (!(popupBodyEl instanceof HTMLElement) || !(popupCardEl instanceof HTMLElement)) {
+    return;
+  }
+  popupBodyEl.scrollTo({ top: 0, behavior: "auto" });
+  const jumpBtn = popupCardEl.querySelector("#helmet-event-jump");
+  const detailsSection = popupCardEl.querySelector("#helmet-event-details");
+  if (!(jumpBtn instanceof HTMLButtonElement) || !(detailsSection instanceof HTMLElement)) {
+    return;
+  }
+  jumpBtn.addEventListener("click", () => {
+    popupBodyEl.scrollTo({
+      top: detailsSection.offsetTop,
+      behavior: "smooth"
+    });
+  });
 }
 
 const legalPopupPages = {
@@ -1851,6 +1877,11 @@ function openProfilePopup(type) {
   popupEl.classList.remove("is-legal-mode");
   syncProfilePopupVariant(type);
   popupCardEl.innerHTML = popupContent[type] || popupContent.tomas;
+  if (type === "casco") {
+    wireHelmetPopupJump();
+  } else if (popupBodyEl instanceof HTMLElement) {
+    popupBodyEl.scrollTo({ top: 0, behavior: "auto" });
+  }
   popupEl.hidden = false;
   popupEl.classList.remove("is-closing");
   window.requestAnimationFrame(() => {
