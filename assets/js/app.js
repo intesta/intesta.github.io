@@ -2270,7 +2270,7 @@ function renderControls(controlType) {
               </div>
             </label>
 
-            <a class="target-btn target-btn--input target-btn--download" href="./assets/images/base_casco_intesta.png" download="base_casco_intesta.png" aria-label="Scarica casco su cui disegnare">
+            <a class="target-btn target-btn--input target-btn--download" href="./assets/images/base_casco_intesta.jpg" download="base_casco_intesta.jpg" aria-label="Scarica casco su cui disegnare">
               <span class="target-corner target-corner--tl"></span>
               <span class="target-corner target-corner--tr"></span>
               <span class="target-corner target-corner--bl"></span>
