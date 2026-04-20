@@ -4,7 +4,6 @@ const appLoaderEl = document.querySelector("#app-loader");
 let isAppLoaderHidden = false;
 const startupTasks = new Set();
 const preloadedImagePromises = new Map();
-const HERO_UI_TONE_STORAGE_KEY = "intesta_hero_ui_tone_v1";
 const STATIC_IMAGE_PRELOAD_URLS = [
   "./assets/images/logo.png",
   "./assets/images/tomas.png",
@@ -28,24 +27,6 @@ const STATIC_IMAGE_PRELOAD_URLS = [
 
 function normalizeHeroUiTone(value) {
   return value === "white" ? "white" : "black";
-}
-
-function getStoredHeroUiTone() {
-  try {
-    return normalizeHeroUiTone(window.localStorage.getItem(HERO_UI_TONE_STORAGE_KEY) || "");
-  } catch (_error) {
-    return "black";
-  }
-}
-
-function storeHeroUiTone(nextTone) {
-  const normalizedTone = normalizeHeroUiTone(nextTone);
-  try {
-    window.localStorage.setItem(HERO_UI_TONE_STORAGE_KEY, normalizedTone);
-  } catch (_error) {
-    // Ignore storage failures (private mode, quota, etc.)
-  }
-  return normalizedTone;
 }
 
 function applyHeroUiTone(nextTone) {
@@ -162,7 +143,7 @@ async function bootLoader() {
 
 registerStartupTask(Promise.all(STATIC_IMAGE_PRELOAD_URLS.map((sourceUrl) => preloadImageUrl(sourceUrl))));
 
-applyHeroUiTone(getStoredHeroUiTone());
+applyHeroUiTone("black");
 
 void bootLoader();
 
@@ -182,8 +163,7 @@ if (window.location.hash === "#/admin") {
     groups: [],
     selectedDeviceId: null,
     requestPending: false,
-    error: "",
-    heroUiTone: getStoredHeroUiTone()
+    error: ""
   };
 
   function escapeHtml(value) {
@@ -219,6 +199,46 @@ if (window.location.hash === "#/admin") {
     return customBase || ADMIN_API_BASE;
   }
 
+  function adminResponseMessage(payload, fallbackMessage) {
+    if (payload && typeof payload.msg === "string") {
+      const msg = payload.msg.trim();
+      if (msg) {
+        return msg;
+      }
+    }
+    return fallbackMessage;
+  }
+
+  function showAdminToast(message, type = "info") {
+    const text = String(message || "").trim();
+    if (!text) {
+      return;
+    }
+    let viewportEl = document.querySelector("#admin-toast-viewport");
+    if (!(viewportEl instanceof HTMLElement)) {
+      viewportEl = document.createElement("div");
+      viewportEl.id = "admin-toast-viewport";
+      viewportEl.className = "admin-toast-viewport";
+      document.body.append(viewportEl);
+    }
+    const toastEl = document.createElement("p");
+    toastEl.className = `admin-toast admin-toast--${type}`;
+    toastEl.textContent = text;
+    viewportEl.append(toastEl);
+    window.requestAnimationFrame(() => {
+      toastEl.classList.add("is-visible");
+    });
+    const closeToast = () => {
+      toastEl.classList.remove("is-visible");
+      window.setTimeout(() => {
+        if (toastEl.isConnected) {
+          toastEl.remove();
+        }
+      }, 220);
+    };
+    window.setTimeout(closeToast, 2600);
+  }
+
   async function adminRequest(path, options = {}) {
     const hasFormData = options.formData instanceof FormData;
     const requestOptions = {
@@ -249,11 +269,12 @@ if (window.location.hash === "#/admin") {
     const { response, payload } = await adminRequest("/pending-count");
     if (response.ok && payload?.result === 1) {
       adminState.pendingCount = Number(payload.pendingDeviceCount || 0);
-      return;
+      return true;
     }
     if (response.status === 401) {
       adminState.authenticated = false;
     }
+    return false;
   }
 
   async function refreshGroups() {
@@ -266,16 +287,17 @@ if (window.location.hash === "#/admin") {
           adminState.selectedDeviceId = null;
         }
       }
-      return;
+      return true;
     }
     if (response.status === 401) {
       adminState.authenticated = false;
     }
+    return false;
   }
 
   async function loadAdminData() {
-    await refreshPendingCount();
-    await refreshGroups();
+    const [pendingOk, groupsOk] = await Promise.all([refreshPendingCount(), refreshGroups()]);
+    return Boolean(pendingOk && groupsOk);
   }
 
   function statusLabel(status) {
@@ -341,6 +363,25 @@ if (window.location.hash === "#/admin") {
         </article>`
       : `<article class="admin-item-block"><p class="admin-item-text">Nessuna foto inviata.</p></article>`;
 
+    const imageTone = group.image ? normalizeHeroUiTone(group.image.logoTone || "black") : "black";
+    const imageToneControls = group.image
+      ? `
+          <div class="admin-modal-settings" role="group" aria-label="Aspetto logo e chevron sulla home">
+            <p class="admin-hero-ui-title">Colore logo sulla foto selezionata</p>
+            <div class="admin-hero-ui">
+              <label class="admin-hero-ui-option">
+                <input type="radio" name="admin-image-logo-tone" value="white" ${imageTone === "white" ? "checked" : ""} />
+                <span>Logo bianco</span>
+              </label>
+              <label class="admin-hero-ui-option">
+                <input type="radio" name="admin-image-logo-tone" value="black" ${imageTone === "black" ? "checked" : ""} />
+                <span>Logo nero</span>
+              </label>
+            </div>
+          </div>
+        `
+      : "";
+
     return `
       <section class="admin-modal" id="admin-modal" aria-modal="true" role="dialog" aria-label="Dettaglio invio">
         <div class="admin-modal-backdrop" data-admin-close-modal></div>
@@ -348,19 +389,7 @@ if (window.location.hash === "#/admin") {
           <button class="admin-modal-close" type="button" data-admin-close-modal aria-label="Chiudi dettaglio">×</button>
           <h2 class="admin-modal-title">Dettaglio invio</h2>
           <p class="admin-list-meta">Stato attuale: <span class="admin-status admin-status--${escapeHtml(group.status || "pending")}">${escapeHtml(statusLabel(String(group.status || "pending")))}</span></p>
-          <div class="admin-modal-settings" role="group" aria-label="Aspetto home">
-            <p class="admin-hero-ui-title">Home hero logo/chevron</p>
-            <div class="admin-hero-ui">
-              <label class="admin-hero-ui-option">
-                <input type="radio" name="admin-hero-ui-tone-modal" value="white" ${adminState.heroUiTone === "white" ? "checked" : ""} />
-                <span>Logo bianco</span>
-              </label>
-              <label class="admin-hero-ui-option">
-                <input type="radio" name="admin-hero-ui-tone-modal" value="black" ${adminState.heroUiTone === "black" ? "checked" : ""} />
-                <span>Logo nero</span>
-              </label>
-            </div>
-          </div>
+          ${imageToneControls}
           ${textHtml}
           ${imageHtml}
           <form class="admin-image-upload-form" id="admin-image-upload-form">
@@ -416,17 +445,23 @@ if (window.location.hash === "#/admin") {
             });
             if (!response.ok || payload?.result !== 1) {
               adminState.error = payload?.msg || "Accesso non riuscito.";
+              showAdminToast(adminState.error, "error");
               renderAdmin();
               return;
             }
             adminState.authenticated = true;
             adminState.loading = true;
             renderAdmin();
-            await loadAdminData();
+            const dataLoaded = await loadAdminData();
             adminState.loading = false;
+            showAdminToast(
+              dataLoaded ? "Accesso admin effettuato." : "Accesso riuscito, ma aggiornamento dati non completo.",
+              dataLoaded ? "success" : "error"
+            );
             renderAdmin();
           } catch (_error) {
             adminState.error = "Errore di rete.";
+            showAdminToast(adminState.error, "error");
             renderAdmin();
           } finally {
             adminState.requestPending = false;
@@ -483,7 +518,7 @@ if (window.location.hash === "#/admin") {
     const imageUploadForm = document.querySelector("#admin-image-upload-form");
     const imageUploadSubmit = document.querySelector("#admin-image-upload-submit");
     const imageUploadInput = document.querySelector("#admin-image-file");
-    const heroUiToneInputs = Array.from(document.querySelectorAll("input[name=\"admin-hero-ui-tone-modal\"]"));
+    const imageLogoToneInputs = Array.from(document.querySelectorAll("input[name=\"admin-image-logo-tone\"]"));
 
     openButtons.forEach((button) => {
       if (!(button instanceof HTMLButtonElement)) {
@@ -510,7 +545,16 @@ if (window.location.hash === "#/admin") {
 
     if (logoutButton instanceof HTMLButtonElement) {
       logoutButton.addEventListener("click", async () => {
-        await adminRequest("/logout", { method: "POST" });
+        try {
+          const { response, payload } = await adminRequest("/logout", { method: "POST" });
+          if (!response.ok || payload?.result !== 1) {
+            showAdminToast(adminResponseMessage(payload, "Logout non riuscito."), "error");
+          } else {
+            showAdminToast(adminResponseMessage(payload, "Logout effettuato."), "success");
+          }
+        } catch (_error) {
+          showAdminToast("Errore di rete durante logout.", "error");
+        }
         adminState.authenticated = false;
         adminState.groups = [];
         adminState.selectedDeviceId = null;
@@ -522,21 +566,55 @@ if (window.location.hash === "#/admin") {
       refreshListButton.addEventListener("click", async () => {
         adminState.loading = true;
         renderAdmin();
-        await loadAdminData();
+        let loadedOk = false;
+        try {
+          loadedOk = await loadAdminData();
+          showAdminToast(loadedOk ? "Elenco aggiornato." : "Aggiornamento incompleto.", loadedOk ? "success" : "error");
+        } catch (_error) {
+          showAdminToast("Errore durante l'aggiornamento elenco.", "error");
+        }
         adminState.loading = false;
         renderAdmin();
       });
     }
-    heroUiToneInputs.forEach((inputEl) => {
+    imageLogoToneInputs.forEach((inputEl) => {
       if (!(inputEl instanceof HTMLInputElement)) {
         return;
       }
       inputEl.addEventListener("change", () => {
-        if (!inputEl.checked) {
+        const group = selectedGroup();
+        const contributionId = group && group.image && Number(group.image.id) > 0 ? Number(group.image.id) : 0;
+        if (!inputEl.checked || contributionId <= 0 || adminState.requestPending) {
           return;
         }
-        adminState.heroUiTone = storeHeroUiTone(inputEl.value);
-        applyHeroUiTone(adminState.heroUiTone);
+        adminState.requestPending = true;
+        void (async () => {
+          try {
+            const { response, payload } = await adminRequest("/image-logo-tone", {
+              method: "POST",
+              body: {
+                contributionId,
+                logoTone: normalizeHeroUiTone(inputEl.value)
+              }
+            });
+            if (!response.ok || payload?.result !== 1) {
+              showAdminToast(adminResponseMessage(payload, "Impossibile aggiornare il colore logo."), "error");
+              return;
+            }
+            const loadedOk = await loadAdminData();
+            showAdminToast(
+              loadedOk
+                ? adminResponseMessage(payload, "Colore logo aggiornato.")
+                : "Colore aggiornato, ma refresh non completo.",
+              loadedOk ? "success" : "error"
+            );
+          } catch (_error) {
+            showAdminToast("Errore di rete durante salvataggio colore.", "error");
+          } finally {
+            adminState.requestPending = false;
+            renderAdmin();
+          }
+        })();
       });
     });
 
@@ -554,14 +632,24 @@ if (window.location.hash === "#/admin") {
         }
         adminState.requestPending = true;
         try {
-          await adminRequest("/device-status", {
+          const { response, payload } = await adminRequest("/device-status", {
             method: "POST",
             body: {
               deviceId: adminState.selectedDeviceId,
               status: nextStatus
             }
           });
-          await loadAdminData();
+          if (!response.ok || payload?.result !== 1) {
+            showAdminToast(adminResponseMessage(payload, "Aggiornamento stato non riuscito."), "error");
+            return;
+          }
+          const loadedOk = await loadAdminData();
+          showAdminToast(
+            loadedOk ? adminResponseMessage(payload, "Stato aggiornato.") : "Stato aggiornato, ma refresh non completo.",
+            loadedOk ? "success" : "error"
+          );
+        } catch (_error) {
+          showAdminToast("Errore di rete durante aggiornamento stato.", "error");
         } finally {
           adminState.requestPending = false;
           renderAdmin();
@@ -582,16 +670,26 @@ if (window.location.hash === "#/admin") {
         }
         adminState.requestPending = true;
         try {
-          await adminRequest("/device-delete-unapproved", {
+          const { response, payload } = await adminRequest("/device-delete-unapproved", {
             method: "POST"
           });
-          await loadAdminData();
+          if (!response.ok || payload?.result !== 1) {
+            showAdminToast(adminResponseMessage(payload, "Eliminazione non riuscita."), "error");
+            return;
+          }
+          const loadedOk = await loadAdminData();
           if (adminState.selectedDeviceId !== null) {
             const stillExists = adminState.groups.some((group) => Number(group.deviceId) === Number(adminState.selectedDeviceId));
             if (!stillExists) {
               adminState.selectedDeviceId = null;
             }
           }
+          showAdminToast(
+            loadedOk ? adminResponseMessage(payload, "Invii non approvati eliminati.") : "Eliminazione ok, ma refresh non completo.",
+            loadedOk ? "success" : "error"
+          );
+        } catch (_error) {
+          showAdminToast("Errore di rete durante eliminazione.", "error");
         } finally {
           adminState.requestPending = false;
           renderAdmin();
@@ -635,11 +733,21 @@ if (window.location.hash === "#/admin") {
         adminState.requestPending = true;
         syncUploadButtonState();
         try {
-          await adminRequest("/device-image", {
+          const { response, payload } = await adminRequest("/device-image", {
             method: "POST",
             formData
           });
-          await loadAdminData();
+          if (!response.ok || payload?.result !== 1) {
+            showAdminToast(adminResponseMessage(payload, "Upload foto non riuscito."), "error");
+            return;
+          }
+          const loadedOk = await loadAdminData();
+          showAdminToast(
+            loadedOk ? adminResponseMessage(payload, "Foto aggiornata.") : "Upload completato, ma refresh non completo.",
+            loadedOk ? "success" : "error"
+          );
+        } catch (_error) {
+          showAdminToast("Errore di rete durante upload foto.", "error");
         } finally {
           adminState.requestPending = false;
           syncUploadButtonState();
@@ -676,7 +784,7 @@ const TARGETS_SLIDE_INDEX = 4;
 const POPUP_ANIMATION_MS = 320;
 const CHOICE_ANIMATION_MS = 340;
 const CHOICE_SWEEP_BLUR_PX = 1.8;
-const HERO_CAROUSEL_INTERVAL_MS = 2600;
+const HERO_CAROUSEL_INTERVAL_MS = 8000;
 
 const app = document.querySelector("#app");
 
@@ -1218,7 +1326,7 @@ const slideEls = slides.map((slideData) => {
 const heroLayerAEl = slideEls[0]?.querySelector("#hero-layer-a");
 const heroLayerBEl = slideEls[0]?.querySelector("#hero-layer-b");
 const heroCarouselEl = slideEls[0]?.querySelector(".hero-carousel");
-let heroBackgroundSources = [];
+let heroCarouselSlides = [];
 let heroActiveLayerIsA = true;
 let heroCarouselIndex = 0;
 let heroCarouselTimerId = null;
@@ -1234,14 +1342,31 @@ function setHeroLayerSource(layerEl, sourceUrl) {
   layerEl.style.backgroundImage = `url("${sourceUrl.replace(/"/g, "%22")}")`;
 }
 
-function applyHeroBackgroundSources(sourceUrls) {
-  const nextSources = Array.isArray(sourceUrls)
-    ? sourceUrls.filter((sourceUrl, index, arr) => Boolean(sourceUrl) && arr.indexOf(sourceUrl) === index)
+function applyHeroBackgroundSources(slideItems) {
+  const nextSlides = Array.isArray(slideItems)
+    ? slideItems
+      .map((item) => {
+        if (!item || typeof item !== "object") {
+          return null;
+        }
+        const src = typeof item.src === "string" ? item.src.trim() : "";
+        if (!src) {
+          return null;
+        }
+        return {
+          src,
+          logoTone: normalizeHeroUiTone(item.logoTone || "black")
+        };
+      })
+      .filter((item) => item !== null)
+      .filter((item, index, arr) => arr.findIndex((entry) => entry && entry.src === item.src) === index)
     : [];
-  heroBackgroundSources = nextSources;
+  heroCarouselSlides = nextSlides;
   heroCarouselIndex = 0;
   heroActiveLayerIsA = true;
-  const firstSource = heroBackgroundSources[0] || "";
+  const firstSlide = heroCarouselSlides[0] || null;
+  const firstSource = firstSlide ? firstSlide.src : "";
+  const firstTone = firstSlide ? firstSlide.logoTone : "black";
   setHeroLayerSource(heroLayerAEl, firstSource);
   setHeroLayerSource(heroLayerBEl, firstSource);
   if (heroLayerAEl instanceof HTMLElement) {
@@ -1253,6 +1378,7 @@ function applyHeroBackgroundSources(sourceUrls) {
   if (heroCarouselEl instanceof HTMLElement) {
     heroCarouselEl.classList.toggle("has-media", Boolean(firstSource));
   }
+  applyHeroUiTone(firstTone);
 }
 
 function startHeroCarousel() {
@@ -1263,21 +1389,26 @@ function startHeroCarousel() {
     window.clearInterval(heroCarouselTimerId);
     heroCarouselTimerId = null;
   }
-  if (heroBackgroundSources.length <= 1) {
+  if (heroCarouselSlides.length <= 1) {
     return;
   }
   heroCarouselTimerId = window.setInterval(() => {
-    heroCarouselIndex = (heroCarouselIndex + 1) % heroBackgroundSources.length;
+    heroCarouselIndex = (heroCarouselIndex + 1) % heroCarouselSlides.length;
+    const nextSlide = heroCarouselSlides[heroCarouselIndex];
+    if (!nextSlide) {
+      return;
+    }
     const nextLayerEl = heroActiveLayerIsA ? heroLayerBEl : heroLayerAEl;
     const previousLayerEl = heroActiveLayerIsA ? heroLayerAEl : heroLayerBEl;
-    setHeroLayerSource(nextLayerEl, heroBackgroundSources[heroCarouselIndex]);
+    setHeroLayerSource(nextLayerEl, nextSlide.src);
     nextLayerEl.classList.add("is-active");
     previousLayerEl.classList.remove("is-active");
     heroActiveLayerIsA = !heroActiveLayerIsA;
+    applyHeroUiTone(nextSlide.logoTone);
   }, HERO_CAROUSEL_INTERVAL_MS);
 }
 
-applyHeroBackgroundSources(heroBackgroundSources);
+applyHeroBackgroundSources([]);
 startHeroCarousel();
 
 function appendChatMessage(role, text) {
@@ -1549,7 +1680,8 @@ async function fetchApprovedGalleryImages() {
           src,
           assetKey: typeof item.assetKey === "string" && item.assetKey ? item.assetKey : "",
           likeCount: Number.isFinite(Number(item.likeCount)) ? Number(item.likeCount) : 0,
-          likedByViewer: Boolean(item.likedByViewer)
+          likedByViewer: Boolean(item.likedByViewer),
+          logoTone: normalizeHeroUiTone(item.logoTone || "black")
         };
       }).filter(Boolean);
       const alex = payload.alex && typeof payload.alex === "object"
@@ -1588,9 +1720,12 @@ registerStartupTask((async () => {
   const approvedItems = await fetchApprovedGalleryImages();
   const heroSources = approvedItems
     .filter((item) => item && typeof item === "object" && !item.isAlex)
-    .map((item) => (typeof item.src === "string" ? item.src : ""))
-    .filter((item) => Boolean(item));
-  await Promise.all(heroSources.map((sourceUrl) => preloadImageUrl(sourceUrl)));
+    .map((item) => ({
+      src: typeof item.src === "string" ? item.src : "",
+      logoTone: normalizeHeroUiTone(item.logoTone || "black")
+    }))
+    .filter((item) => Boolean(item.src));
+  await Promise.all(heroSources.map((item) => preloadImageUrl(item.src)));
   applyHeroBackgroundSources(heroSources);
   startHeroCarousel();
 })());

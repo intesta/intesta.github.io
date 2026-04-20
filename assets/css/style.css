@@ -29,6 +29,7 @@
   --dot-radius: 2px;
   --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --hero-ui-filter: none;
+  --ui-soft-white: #f1f1f1;
 }
 
 :root[data-hero-ui-tone="black"] {
@@ -65,7 +66,7 @@ body.is-app-loading {
   height: 36px;
   border-radius: 999px;
   border: 2px solid rgba(255, 255, 255, 0.35);
-  border-top-color: #fff;
+  border-top-color: var(--ui-soft-white);
   animation: app-loader-spin 0.8s linear infinite;
 }
 
@@ -881,7 +882,7 @@ b{
   object-fit: contain;
   display: block;
   box-shadow: rgba(0, 0, 0, 0.25) 0px 8px 24px;
-  background: #fff;
+  background: var(--ui-soft-white);
 }
 
 .gallery-like-btn {
@@ -1081,7 +1082,7 @@ b{
   height: calc(100% - 28px);
   object-fit: cover;
   border-radius: 8px;
-  background: #fff;
+  background: var(--ui-soft-white);
 }
 
 .helmet-upload-preview.is-hidden {
@@ -1307,7 +1308,7 @@ b{
   height: 27px;
   padding: 0;
   background: transparent;
-  color: #fff;
+  color: var(--ui-soft-white);
   font-size: 27px;
   font-weight: 400;
   line-height: 1;
@@ -1354,7 +1355,7 @@ b{
   max-width: min(92vw, 460px);
   padding: 10px 14px;
   border-radius: 10px;
-  color: #fff;
+  color: var(--ui-soft-white);
   font-size: 0.86rem;
   font-weight: 600;
   letter-spacing: 0.01em;
@@ -1764,7 +1765,7 @@ b{
   padding: 8px 10px;
   font: inherit;
   font-size: 0.86rem;
-  background: #fff;
+  background: var(--ui-soft-white);
   color: #171c22;
 }
 
@@ -1776,7 +1777,7 @@ b{
   font-size: 0.82rem;
   font-weight: 600;
   background: #11151b;
-  color: #fff;
+  color: var(--ui-soft-white);
   cursor: pointer;
 }
 
@@ -2142,7 +2143,8 @@ b{
 }
 
 .profile-popup.is-helmet-event-mode .profile-popup-close {
-  z-index: 1;
+  z-index: 230;
+  pointer-events: auto;
 }
 
 .helmet-event-screen--details {
@@ -2179,7 +2181,7 @@ b{
   font-size: 16px;
   line-height: 1.15;
   font-weight: 700;
-  color: #fff;
+  color: var(--ui-soft-white);
   letter-spacing: 0.005em;
 }
 
@@ -2194,7 +2196,7 @@ b{
   line-height: 0.98;
   font-weight: 700;
   letter-spacing: -0.015em;
-  color: #fff;
+  color: var(--ui-soft-white);
 
 }
 
@@ -2203,7 +2205,7 @@ b{
   font-size: 20px;
   line-height: 1.45;
   font-weight: 400;
-  color: #fff;
+  color: var(--ui-soft-white);
 
 }
 
@@ -2211,7 +2213,7 @@ b{
   margin: 0;
   font-size: 13px;
   line-height: 1.25;
-  color: #fff;
+  color: var(--ui-soft-white);
 
 }
 
@@ -2219,7 +2221,7 @@ b{
   margin: 0 0 20px;
   font-size: 13px;
   line-height: 1.1;
-  color: #fff;
+  color: var(--ui-soft-white);
 
 }
 
@@ -2240,14 +2242,14 @@ b{
   font-size: 20px;
   line-height: 1.1;
   font-weight: 400;
-  color: #fff;
+  color: var(--ui-soft-white);
 }
 
 .helmet-event-timeline-desc {
   font-size: 16px;
   line-height: 1.45;
   font-weight: 400;
-  color: #fff;
+  color: var(--ui-soft-white);
 }
 
 
@@ -2321,7 +2323,7 @@ body.admin-mode .legal-dock {
   border: 1px solid rgba(17, 22, 31, 0.2);
   padding: 11px 12px;
   font: inherit;
-  background: #fff;
+  background: var(--ui-soft-white);
 }
 
 .admin-input:focus-visible {
@@ -2466,12 +2468,12 @@ body.admin-mode .legal-dock {
 
 .admin-btn--danger {
   background: #cf3e3e;
-  color: #fff;
+  color: var(--ui-soft-white);
 }
 
 .admin-btn--success {
   background: #2d9b4c;
-  color: #fff;
+  color: var(--ui-soft-white);
 }
 
 .admin-count-dot {
@@ -2479,7 +2481,7 @@ body.admin-mode .legal-dock {
   height: 22px;
   border-radius: 999px;
   background: #111821;
-  color: #fff;
+  color: var(--ui-soft-white);
   text-align: center;
   font-size: 0.72rem;
   font-weight: 700;
@@ -2722,7 +2724,58 @@ body.admin-mode .legal-dock {
 .admin-upload-submit.is-ready {
   opacity: 1;
   background: #11151b;
-  color: #fff;
+  color: var(--ui-soft-white);
+}
+
+.admin-toast-viewport {
+  position: fixed;
+  left: 50%;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  width: min(calc(100vw - 24px), 420px);
+  display: grid;
+  gap: 8px;
+  z-index: 320;
+  pointer-events: none;
+}
+
+.admin-toast {
+  margin: 0;
+  border-radius: 12px;
+  border: 1px solid rgba(20, 27, 38, 0.16);
+  background: rgba(248, 250, 252, 0.98);
+  color: #1c2530;
+  box-shadow: 0 10px 24px rgba(12, 18, 28, 0.2);
+  padding: 10px 12px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  line-height: 1.3;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 190ms var(--motion-ease), transform 190ms var(--motion-ease);
+}
+
+.admin-toast.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.admin-toast--success {
+  border-color: rgba(45, 155, 76, 0.35);
+  background: rgba(230, 247, 236, 0.98);
+  color: #1f6d37;
+}
+
+.admin-toast--error {
+  border-color: rgba(207, 62, 62, 0.36);
+  background: rgba(254, 236, 236, 0.98);
+  color: #8a2424;
+}
+
+.admin-toast--info {
+  border-color: rgba(30, 108, 219, 0.25);
+  background: rgba(236, 244, 255, 0.98);
+  color: #1e4f93;
 }
 
 @media (min-width: 720px) {
