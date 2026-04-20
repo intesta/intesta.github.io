@@ -25,6 +25,15 @@ const STATIC_IMAGE_PRELOAD_URLS = [
   "./assets/images/empty-like.svg",
   "./assets/images/like.png"
 ];
+const CRITICAL_ICON_PRELOAD_URLS = [
+  "./assets/images/empty-like.svg",
+  "./assets/images/like.png",
+  "./assets/images/x-square.svg",
+  "./assets/images/close_popup.svg",
+  "./assets/images/send-light.svg",
+  "./assets/images/send.svg",
+  "./assets/images/upload.svg"
+];
 const STATIC_SOUND_PRELOAD_URLS = [
   "./assets/sounds/lowFrequency_explosion_000.ogg",
   "./assets/sounds/forceField_002.ogg",
@@ -270,6 +279,7 @@ async function bootLoader() {
 }
 
 registerStartupTask(Promise.all(STATIC_IMAGE_PRELOAD_URLS.map((sourceUrl) => preloadImageUrl(sourceUrl))));
+registerStartupTask(Promise.all(CRITICAL_ICON_PRELOAD_URLS.map((sourceUrl) => preloadImageUrl(sourceUrl))));
 registerStartupTask(Promise.all(STATIC_SOUND_PRELOAD_URLS.map((sourceUrl) => preloadAudioUrl(sourceUrl))));
 
 applyHeroUiTone("black");
