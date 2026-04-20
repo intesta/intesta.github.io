@@ -5,6 +5,8 @@ let isAppLoaderHidden = false;
 const startupTasks = new Set();
 const preloadedImagePromises = new Map();
 const preloadedAudioPromises = new Map();
+const GALLERY_LIKE_ICON_EMPTY_URL = "./assets/images/empty-like.svg";
+const GALLERY_LIKE_ICON_FILLED_URL = "./assets/images/like.png";
 const STATIC_IMAGE_PRELOAD_URLS = [
   "./assets/images/logo.png",
   "./assets/images/tomas.png",
@@ -22,12 +24,12 @@ const STATIC_IMAGE_PRELOAD_URLS = [
   "./assets/images/check-circle.svg",
   "./assets/images/alert-circle.svg",
   "./assets/images/close_popup.svg",
-  "./assets/images/empty-like.svg",
-  "./assets/images/like.png"
+  GALLERY_LIKE_ICON_EMPTY_URL,
+  GALLERY_LIKE_ICON_FILLED_URL
 ];
 const CRITICAL_ICON_PRELOAD_URLS = [
-  "./assets/images/empty-like.svg",
-  "./assets/images/like.png",
+  GALLERY_LIKE_ICON_EMPTY_URL,
+  GALLERY_LIKE_ICON_FILLED_URL,
   "./assets/images/x-square.svg",
   "./assets/images/close_popup.svg",
   "./assets/images/send-light.svg",
@@ -193,6 +195,53 @@ function preloadImageUrl(sourceUrl) {
   return preloadPromise;
 }
 
+function warmGalleryLikeIconDuringLoader() {
+  return new Promise((resolve) => {
+    if (!(document.body instanceof HTMLElement)) {
+      resolve();
+      return;
+    }
+    const warmupImage = new Image();
+    warmupImage.decoding = "sync";
+    warmupImage.loading = "eager";
+    warmupImage.alt = "";
+    warmupImage.width = 44;
+    warmupImage.height = 44;
+    warmupImage.style.position = "fixed";
+    warmupImage.style.left = "-9999px";
+    warmupImage.style.top = "-9999px";
+    warmupImage.style.width = "44px";
+    warmupImage.style.height = "44px";
+    warmupImage.style.opacity = "0";
+    warmupImage.style.pointerEvents = "none";
+    const onDone = async () => {
+      warmupImage.removeEventListener("load", onDone);
+      warmupImage.removeEventListener("error", onDone);
+      if (typeof warmupImage.decode === "function") {
+        try {
+          await warmupImage.decode();
+        } catch (_error) {
+          // Ignore decode failures and continue.
+        }
+      }
+      document.body.appendChild(warmupImage);
+      // Force first layout/paint while loader is still visible.
+      void warmupImage.getBoundingClientRect();
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          if (warmupImage.isConnected) {
+            warmupImage.remove();
+          }
+          resolve();
+        });
+      });
+    };
+    warmupImage.addEventListener("load", onDone, { once: true });
+    warmupImage.addEventListener("error", onDone, { once: true });
+    warmupImage.src = GALLERY_LIKE_ICON_FILLED_URL;
+  });
+}
+
 function preloadAudioUrl(sourceUrl) {
   const normalizedUrl = String(sourceUrl || "").trim();
   if (!normalizedUrl) {
@@ -281,6 +330,10 @@ async function bootLoader() {
 registerStartupTask(Promise.all(STATIC_IMAGE_PRELOAD_URLS.map((sourceUrl) => preloadImageUrl(sourceUrl))));
 registerStartupTask(Promise.all(CRITICAL_ICON_PRELOAD_URLS.map((sourceUrl) => preloadImageUrl(sourceUrl))));
 registerStartupTask(Promise.all(STATIC_SOUND_PRELOAD_URLS.map((sourceUrl) => preloadAudioUrl(sourceUrl))));
+registerStartupTask((async () => {
+  await preloadImageUrl(GALLERY_LIKE_ICON_FILLED_URL);
+  await warmGalleryLikeIconDuringLoader();
+})());
 
 applyHeroUiTone("black");
 
@@ -1195,8 +1248,8 @@ function syncGalleryLikeUi() {
   galleryLikeBtnEl.classList.toggle("is-liked", currentGalleryLikedByViewer);
   if (galleryLikeIconEl instanceof HTMLImageElement) {
     galleryLikeIconEl.src = currentGalleryLikedByViewer
-      ? "./assets/images/like.png"
-      : "./assets/images/empty-like.svg";
+      ? GALLERY_LIKE_ICON_FILLED_URL
+      : GALLERY_LIKE_ICON_EMPTY_URL;
   }
 }
 
