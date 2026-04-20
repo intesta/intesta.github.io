@@ -2375,6 +2375,7 @@ function closeChatPanel() {
   isChatOpen = false;
   chatRootEl.classList.remove("is-open");
   chatPanelEl.setAttribute("aria-hidden", "true");
+  syncAiChatDocking();
 }
 
 function openChatPanel() {
@@ -2382,6 +2383,7 @@ function openChatPanel() {
   chatRootEl.classList.add("is-open");
   chatPanelEl.setAttribute("aria-hidden", "false");
   chatInputEl.focus();
+  syncAiChatDocking();
 }
 
 function syncAiChatDocking() {
@@ -2392,13 +2394,22 @@ function syncAiChatDocking() {
     return;
   }
 
-  const remaining = Math.max(0, controlsEl.scrollHeight - controlsEl.scrollTop - controlsEl.clientHeight);
   const footerContactEl = controlsEl.querySelector(".targets-contact-row");
   const inlineLegalEl = controlsEl.querySelector(".legal-dock.is-inline-footer");
-  const footerBlockHeight = (footerContactEl instanceof HTMLElement ? footerContactEl.offsetHeight : 0)
-    + (inlineLegalEl instanceof HTMLElement ? inlineLegalEl.offsetHeight : 0);
-  const reserveSpace = Math.max(110, footerBlockHeight - 4);
-  const shiftPx = Math.max(0, reserveSpace - remaining);
+  const footerEls = [footerContactEl, inlineLegalEl]
+    .filter((el) => el instanceof HTMLElement);
+  if (footerEls.length === 0) {
+    chatRootEl.classList.remove("is-docked");
+    chatRootEl.style.setProperty("--ai-dock-shift", "0px");
+    return;
+  }
+
+  const footerTopPx = Math.min(...footerEls.map((el) => el.getBoundingClientRect().top));
+  const chatRect = chatRootEl.getBoundingClientRect();
+  const minGapPx = 12;
+  const overlapPx = (chatRect.bottom + minGapPx) - footerTopPx;
+  const maxShiftPx = Math.max(0, chatRect.top - 8);
+  const shiftPx = Math.max(0, Math.min(maxShiftPx, overlapPx));
 
   chatRootEl.classList.toggle("is-docked", shiftPx > 0.5);
   chatRootEl.style.setProperty("--ai-dock-shift", `${shiftPx.toFixed(1)}px`);
@@ -3712,6 +3723,14 @@ appendChatMessage(
 window.addEventListener("touchstart", onTouchStart, { passive: true });
 window.addEventListener("touchend", onTouchEnd, { passive: true });
 window.addEventListener("wheel", onWheel, { passive: true });
+window.addEventListener("resize", () => {
+  syncAiChatDocking();
+});
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", () => {
+    syncAiChatDocking();
+  });
+}
 
 paint(current);
 }
