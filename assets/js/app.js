@@ -1035,13 +1035,14 @@ app.innerHTML = `
         <button class="ai-chat-close" id="ai-chat-close" type="button" aria-label="Chiudi chat">×</button>
       </header>
       <div class="ai-chat-messages" id="ai-chat-messages"></div>
+      <div class="ai-chat-quick" id="ai-chat-quick" aria-label="Domande rapide suggerite"></div>
       <form class="ai-chat-form" id="ai-chat-form">
         <input
           class="ai-chat-input"
           id="ai-chat-input"
           type="text"
           name="message"
-          placeholder="Scrivi la tua domanda..."
+          placeholder="Es: idea casco, invio foto, privacy, contatti..."
           autocomplete="off"
           required
         />
@@ -1073,9 +1074,18 @@ const chatLauncherEl = app.querySelector("#ai-chat-launcher");
 const chatPanelEl = app.querySelector("#ai-chat-panel");
 const chatCloseEl = app.querySelector("#ai-chat-close");
 const chatMessagesEl = app.querySelector("#ai-chat-messages");
+const chatQuickEl = app.querySelector("#ai-chat-quick");
 const chatFormEl = app.querySelector("#ai-chat-form");
 const chatInputEl = app.querySelector("#ai-chat-input");
 const chatSendEl = app.querySelector("#ai-chat-send");
+const CHAT_QUICK_PROMPTS = [
+  "Come invio la foto del casco?",
+  "Che formati file posso caricare?",
+  "Dammi 5 idee creative per il casco",
+  "Dove trovo i contatti?",
+  "Riassumi il progetto Intesta in 4 punti"
+];
+const chatQuickChipEls = [];
 const legalDockEl = document.querySelector(".legal-dock");
 const legalLinkEls = legalDockEl ? Array.from(legalDockEl.querySelectorAll(".legal-icon")) : [];
 
@@ -1305,6 +1315,7 @@ Autore/progetto: Tomas Berardi, studente ISIA (Design del prodotto e della comun
 Obiettivo del sito: coinvolgere utenti giovani, presentare il progetto, invitare a interagire con i contenuti e a contattare il progetto.
 Tono del sito: diretto, semplice, umano, contemporaneo, frasi brevi, senza tecnicismi inutili.
 Contenuti principali: percorso a slide, sezioni profilo/casco, contatti, pagine legali (privacy, cookie, termini di utilizzo).
+Ambito creativo: l'assistente puo supportare la creazione del casco con brainstorming, proposte colori/materiali/texture, concept visivi, naming e varianti di stile.
 Vincoli: niente divagazioni su temi non collegati al progetto/sito; niente invenzioni di dati, prezzi, policy o funzionalita non presenti.
 `;
 
@@ -2032,8 +2043,8 @@ function scrollAiChatToBottom(anchorEl) {
     return;
   }
   const run = () => {
-    if (anchorEl && typeof anchorEl.scrollIntoView === "function") {
-      anchorEl.scrollIntoView({ block: "end", behavior: "instant" });
+    if (anchorEl && anchorEl.parentElement !== chatMessagesEl) {
+      return;
     }
     chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
   };
@@ -2088,6 +2099,16 @@ async function appendAssistantMessageTypewriter(text) {
   });
   await sleep(130);
 
+  let keepAutoScroll = true;
+  const autoScrollLoop = () => {
+    if (!keepAutoScroll) {
+      return;
+    }
+    scrollAiChatToBottom(msg);
+    window.requestAnimationFrame(autoScrollLoop);
+  };
+  window.requestAnimationFrame(autoScrollLoop);
+
   const fullText = text || "";
   for (let i = 0; i < fullText.length; i += 1) {
     msg.textContent += fullText[i];
@@ -2095,6 +2116,7 @@ async function appendAssistantMessageTypewriter(text) {
     await sleep(16);
   }
 
+  keepAutoScroll = false;
   msg.classList.remove("ai-chat-msg--typewriter");
   msg.classList.remove("ai-chat-msg--from-dots");
   msg.classList.remove("is-expanding");
@@ -2106,6 +2128,49 @@ function setChatPendingState(pending) {
   isChatRequestPending = pending;
   chatInputEl.disabled = pending;
   chatSendEl.disabled = pending;
+  chatQuickChipEls.forEach((chipEl) => {
+    chipEl.disabled = pending;
+  });
+}
+
+function mountChatQuickChips() {
+  if (!(chatQuickEl instanceof HTMLElement)) {
+    return;
+  }
+  chatQuickEl.innerHTML = "";
+  CHAT_QUICK_PROMPTS.forEach((promptText) => {
+    const chipEl = document.createElement("button");
+    chipEl.type = "button";
+    chipEl.className = "ai-chat-chip";
+    chipEl.dataset.chatPrompt = promptText;
+    chipEl.textContent = promptText;
+    chatQuickEl.append(chipEl);
+    chatQuickChipEls.push(chipEl);
+  });
+}
+
+async function submitChatMessage(rawMessage) {
+  if (isChatRequestPending) {
+    return;
+  }
+  const userMessage = String(rawMessage || "").trim();
+  if (!userMessage) {
+    return;
+  }
+
+  appendChatMessage("user", userMessage);
+  chatInputEl.value = "";
+  setChatPendingState(true);
+  showTypingIndicator();
+
+  try {
+    const reply = await getAssistantReply(userMessage);
+    await appendAssistantMessageTypewriter(reply);
+  } finally {
+    hideTypingIndicator();
+    setChatPendingState(false);
+    chatInputEl.focus();
+  }
 }
 
 async function getAssistantReply(userMessage) {
@@ -2121,11 +2186,32 @@ async function getAssistantReply(userMessage) {
     : [geminiConfig.model || "gemini-2.0-flash-lite", "gemma-3-27b-it"];
   const systemPrompt = geminiConfig.systemPrompt || `
 Sei l'assistente ufficiale del sito Intesta.
-Prima di rispondere, usa sempre e solo il contesto del sito fornito.
-Rispondi in italiano, in modo chiaro, breve e utile, con tono coerente al sito.
-Non divagare: se la domanda e fuori tema, riporta gentilmente la conversazione su Intesta, progetto casco, contenuti del sito, contatti o aspetti legali del sito.
-Non inventare informazioni mancanti. Se un dato non e disponibile, dichiaralo in modo trasparente.
-Mantieni risposte compatte (massimo 3-4 frasi), concrete e orientate all'utente.
+Usa solo il contesto fornito qui sotto e non inventare dettagli mancanti.
+Rispondi in italiano con tono amichevole, diretto e concreto.
+
+Obiettivo:
+- aiutare su progetto Intesta, invio descrizione/foto casco, galleria, contatti e pagine legali;
+- offrire supporto creativo concreto mentre l'utente sta ideando il casco;
+- proporre sempre il prossimo passo pratico.
+
+Stile:
+- massimo 4 frasi brevi;
+- se utile usa 2-4 punti elenco;
+- evita testo generico.
+
+Quando l'utente chiede idee creative casco:
+- proponi 3-5 idee diverse e realizzabili;
+- per ogni idea indica palette colori, mood e un dettaglio distintivo;
+- aggiungi 1 variante "safe" e 1 variante piu audace;
+- chiudi con una domanda utile per convergere (es. stile, colori, target, evento).
+
+Se la domanda e fuori tema:
+- rispondi con 1 frase gentile;
+- proponi subito 2 argomenti pertinenti al sito.
+
+Se manca un dato:
+- dichiaralo chiaramente;
+- indica dove verificarlo nel sito.
 `;
   const mergedContext = geminiConfig.context
     ? `${CHAT_SITE_CONTEXT}\n${geminiConfig.context}`
@@ -3508,30 +3594,25 @@ chatCloseEl.addEventListener("click", () => {
   closeChatPanel();
 });
 
-chatFormEl.addEventListener("submit", async (event) => {
+mountChatQuickChips();
+if (chatQuickEl instanceof HTMLElement) {
+  chatQuickEl.addEventListener("click", (event) => {
+    const targetEl = event.target instanceof Element ? event.target.closest(".ai-chat-chip") : null;
+    if (!(targetEl instanceof HTMLButtonElement)) {
+      return;
+    }
+    const promptText = String(targetEl.dataset.chatPrompt || targetEl.textContent || "").trim();
+    if (!promptText) {
+      return;
+    }
+    chatInputEl.value = promptText;
+    void submitChatMessage(promptText);
+  });
+}
+
+chatFormEl.addEventListener("submit", (event) => {
   event.preventDefault();
-  if (isChatRequestPending) {
-    return;
-  }
-
-  const userMessage = chatInputEl.value.trim();
-  if (!userMessage) {
-    return;
-  }
-
-  appendChatMessage("user", userMessage);
-  chatInputEl.value = "";
-  setChatPendingState(true);
-  showTypingIndicator();
-
-  try {
-    const reply = await getAssistantReply(userMessage);
-    await appendAssistantMessageTypewriter(reply);
-  } finally {
-    hideTypingIndicator();
-    setChatPendingState(false);
-    chatInputEl.focus();
-  }
+  void submitChatMessage(chatInputEl.value);
 });
 
 void (async () => {
@@ -3563,7 +3644,7 @@ void (async () => {
 
 appendChatMessage(
   "assistant",
-  "Ciao! Sono l'assistente AI di Intesta. Posso aiutarti con progetto, casco, popup e contenuti del sito."
+  "Ciao! Sono l'assistente AI di Intesta. Posso aiutarti su progetto, invio descrizione/foto casco, galleria, privacy e contatti, e anche con idee creative per il casco. Esempi: 'Dammi 5 concept casco street', 'Come invio la foto?', 'Che formato file posso caricare?', 'Cosa c'e nella privacy policy?'."
 );
 
 window.addEventListener("touchstart", onTouchStart, { passive: true });
