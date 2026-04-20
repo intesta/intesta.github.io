@@ -2415,12 +2415,21 @@ function syncAiChatDocking() {
   }
 
   const footerTopPx = Math.min(...footerEls.map((el) => el.getBoundingClientRect().top));
+  const footerBottomPx = Math.max(...footerEls.map((el) => el.getBoundingClientRect().bottom));
+  const footerBlockHeight = Math.max(0, footerBottomPx - footerTopPx);
+  const remainingScrollPx = Math.max(0, controlsEl.scrollHeight - controlsEl.scrollTop - controlsEl.clientHeight);
   const viewportBottomPx = window.visualViewport
     ? window.visualViewport.offsetTop + window.visualViewport.height
     : window.innerHeight;
   const chatBottomWithoutShiftPx = viewportBottomPx - 50;
   const minGapPx = 12;
   const overlapPx = (chatBottomWithoutShiftPx + minGapPx) - footerTopPx;
+  const dockStartThresholdPx = Math.max(120, footerBlockHeight + 10);
+  if (remainingScrollPx > dockStartThresholdPx) {
+    chatRootEl.classList.remove("is-docked");
+    chatRootEl.style.setProperty("--ai-dock-shift", "0px");
+    return;
+  }
   const maxShiftPx = Math.max(0, viewportBottomPx - 90);
   const shiftPx = Math.max(0, Math.min(maxShiftPx, overlapPx));
 
