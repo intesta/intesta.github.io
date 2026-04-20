@@ -1114,6 +1114,20 @@ const popupContent = {
   `
 };
 
+function extractImageSourcesFromHtml(htmlString) {
+  const html = String(htmlString || "");
+  const matches = Array.from(html.matchAll(/<img[^>]+src="([^"]+)"/g));
+  return matches
+    .map((match) => (Array.isArray(match) && typeof match[1] === "string" ? match[1].trim() : ""))
+    .filter((src) => Boolean(src));
+}
+
+const popupTemplateImageUrls = Object.values(popupContent)
+  .flatMap((content) => extractImageSourcesFromHtml(content))
+  .filter((value, index, arr) => arr.indexOf(value) === index);
+
+registerStartupTask(Promise.all(popupTemplateImageUrls.map((sourceUrl) => preloadImageUrl(sourceUrl))));
+
 function syncProfilePopupVariant(type) {
   if (!(popupEl instanceof HTMLElement) || !(popupCloseEl instanceof HTMLButtonElement)) {
     return;
