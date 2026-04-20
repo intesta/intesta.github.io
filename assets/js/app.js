@@ -4,6 +4,7 @@ const appLoaderEl = document.querySelector("#app-loader");
 let isAppLoaderHidden = false;
 const startupTasks = new Set();
 const preloadedImagePromises = new Map();
+const preloadedAudioPromises = new Map();
 const STATIC_IMAGE_PRELOAD_URLS = [
   "./assets/images/logo.png",
   "./assets/images/tomas.png",
@@ -24,6 +25,91 @@ const STATIC_IMAGE_PRELOAD_URLS = [
   "./assets/images/empty-like.svg",
   "./assets/images/like.png"
 ];
+const STATIC_SOUND_PRELOAD_URLS = [
+  "./assets/sounds/lowFrequency_explosion_000.ogg",
+  "./assets/sounds/forceField_002.ogg",
+  "./assets/sounds/forceField_003.ogg",
+  "./assets/sounds/impactMetal_001.ogg",
+  "./assets/sounds/impactMetal_003.ogg",
+  "./assets/sounds/laserSmall_004.ogg",
+  "./assets/sounds/impactMetal_004.ogg"
+];
+const NAV_DOWN_SOUND_URL = "./assets/sounds/lowFrequency_explosion_000.ogg";
+const CHOICE_NO_SOUND_URL = "./assets/sounds/forceField_002.ogg";
+const CHOICE_YES_SOUND_URL = "./assets/sounds/forceField_003.ogg";
+const HELMET_ACTION_SOUND_URL = "./assets/sounds/impactMetal_001.ogg";
+const AI_PANEL_SOUND_URL = "./assets/sounds/impactMetal_003.ogg";
+const GALLERY_HEART_SOUND_URL = "./assets/sounds/laserSmall_004.ogg";
+const POPUP_CLOSE_SOUND_URL = "./assets/sounds/impactMetal_004.ogg";
+const NAV_DOWN_SOUND_VOLUME = 0.55;
+const CHOICE_SOUND_VOLUME = 0.62;
+const HELMET_ACTION_SOUND_VOLUME = 0.62;
+const AI_PANEL_SOUND_VOLUME = 0.62;
+const GALLERY_HEART_SOUND_VOLUME = 0.56;
+const POPUP_CLOSE_SOUND_VOLUME = 0.62;
+const uiSoundCache = new Map();
+
+function getUiSound(soundKey, sourceUrl, volume = 1) {
+  const cachedSound = uiSoundCache.get(soundKey);
+  if (cachedSound instanceof HTMLAudioElement) {
+    return cachedSound;
+  }
+  if (typeof Audio !== "function") {
+    return null;
+  }
+  try {
+    const soundEl = new Audio(sourceUrl);
+    soundEl.preload = "auto";
+    soundEl.volume = volume;
+    uiSoundCache.set(soundKey, soundEl);
+    return soundEl;
+  } catch (_error) {
+    return null;
+  }
+}
+
+function playUiSound(soundEl) {
+  if (!(soundEl instanceof HTMLAudioElement)) {
+    return;
+  }
+  try {
+    soundEl.currentTime = 0;
+    const playPromise = soundEl.play();
+    if (playPromise && typeof playPromise.catch === "function") {
+      playPromise.catch(() => {});
+    }
+  } catch (_error) {
+    // Ignore transient playback errors on restricted devices.
+  }
+}
+
+function playNavDownSound() {
+  playUiSound(getUiSound("nav-down", NAV_DOWN_SOUND_URL, NAV_DOWN_SOUND_VOLUME));
+}
+
+function playChoiceSound(choice) {
+  if (choice === "yes") {
+    playUiSound(getUiSound("choice-yes", CHOICE_YES_SOUND_URL, CHOICE_SOUND_VOLUME));
+    return;
+  }
+  playUiSound(getUiSound("choice-no", CHOICE_NO_SOUND_URL, CHOICE_SOUND_VOLUME));
+}
+
+function playPopupCloseSound() {
+  playUiSound(getUiSound("popup-close", POPUP_CLOSE_SOUND_URL, POPUP_CLOSE_SOUND_VOLUME));
+}
+
+function playHelmetActionSound() {
+  playUiSound(getUiSound("helmet-action", HELMET_ACTION_SOUND_URL, HELMET_ACTION_SOUND_VOLUME));
+}
+
+function playAiPanelSound() {
+  playUiSound(getUiSound("ai-panel", AI_PANEL_SOUND_URL, AI_PANEL_SOUND_VOLUME));
+}
+
+function playGalleryHeartSound() {
+  playUiSound(getUiSound("gallery-heart", GALLERY_HEART_SOUND_URL, GALLERY_HEART_SOUND_VOLUME));
+}
 
 function normalizeHeroUiTone(value) {
   return value === "white" ? "white" : "black";
@@ -98,6 +184,48 @@ function preloadImageUrl(sourceUrl) {
   return preloadPromise;
 }
 
+function preloadAudioUrl(sourceUrl) {
+  const normalizedUrl = String(sourceUrl || "").trim();
+  if (!normalizedUrl) {
+    return Promise.resolve();
+  }
+  if (preloadedAudioPromises.has(normalizedUrl)) {
+    return preloadedAudioPromises.get(normalizedUrl);
+  }
+  const preloadPromise = new Promise((resolve) => {
+    if (typeof Audio !== "function") {
+      resolve();
+      return;
+    }
+    const preloadAudio = new Audio();
+    let isSettled = false;
+    const settle = () => {
+      if (isSettled) {
+        return;
+      }
+      isSettled = true;
+      preloadAudio.removeEventListener("canplaythrough", onReady);
+      preloadAudio.removeEventListener("loadeddata", onReady);
+      preloadAudio.removeEventListener("error", onDone);
+      resolve();
+    };
+    const onDone = () => {
+      settle();
+    };
+    const onReady = () => {
+      settle();
+    };
+    preloadAudio.preload = "auto";
+    preloadAudio.addEventListener("canplaythrough", onReady, { once: true });
+    preloadAudio.addEventListener("loadeddata", onReady, { once: true });
+    preloadAudio.addEventListener("error", onDone, { once: true });
+    preloadAudio.src = normalizedUrl;
+    preloadAudio.load();
+  });
+  preloadedAudioPromises.set(normalizedUrl, preloadPromise);
+  return preloadPromise;
+}
+
 function hideAppLoader() {
   if (!(appLoaderEl instanceof HTMLElement) || isAppLoaderHidden) {
     return;
@@ -142,6 +270,7 @@ async function bootLoader() {
 }
 
 registerStartupTask(Promise.all(STATIC_IMAGE_PRELOAD_URLS.map((sourceUrl) => preloadImageUrl(sourceUrl))));
+registerStartupTask(Promise.all(STATIC_SOUND_PRELOAD_URLS.map((sourceUrl) => preloadAudioUrl(sourceUrl))));
 
 applyHeroUiTone("black");
 
@@ -1094,6 +1223,7 @@ function closeGalleryPreview() {
   if (galleryPreviewEl.hidden) {
     return;
   }
+  playPopupCloseSound();
   galleryPreviewEl.classList.remove("is-open");
   galleryPreviewEl.classList.add("is-closing");
   if (galleryPreviewCloseTimerId !== null) {
@@ -1127,6 +1257,7 @@ if (galleryLikeBtnEl instanceof HTMLButtonElement) {
     if (!currentGalleryPreviewSrc) {
       return;
     }
+    playGalleryHeartSound();
     const previousLiked = currentGalleryLikedByViewer;
     const previousLikeCount = currentGalleryLikeCount;
     const nextLiked = !currentGalleryLikedByViewer;
@@ -1310,6 +1441,7 @@ function wireHelmetPopupJump() {
     return;
   }
   jumpBtn.addEventListener("click", () => {
+    playNavDownSound();
     popupBodyEl.scrollTo({
       top: detailsSection.offsetTop,
       behavior: "smooth"
@@ -2278,6 +2410,7 @@ function handleChoice(choice) {
     return;
   }
 
+  playChoiceSound(choice);
   runChoiceAnimation(choice, () => {
     next();
   });
@@ -2307,6 +2440,7 @@ function renderControls(controlType) {
       <img class="icon-svg icon-svg--down" src="./assets/images/chevrons-down.svg" alt="" aria-hidden="true" />
     `;
     button.addEventListener("click", () => {
+      playNavDownSound();
       next();
     });
     controlsEl.append(button);
@@ -2327,6 +2461,7 @@ function renderControls(controlType) {
       />
     `;
     button.addEventListener("click", () => {
+      playNavDownSound();
       next();
     });
     controlsEl.append(button);
@@ -2528,7 +2663,7 @@ function renderControls(controlType) {
               </div>
             </label>
 
-            <a class="target-btn target-btn--input target-btn--download" href="./assets/images/base_casco_intesta.jpg" download="base_casco_intesta.jpg" aria-label="Scarica casco su cui disegnare">
+            <a class="target-btn target-btn--input target-btn--download" href="./assets/images/base_casco_intesta.jpg" download="base_casco_intesta.jpg" target="_blank" rel="noopener noreferrer" aria-label="Scarica casco su cui disegnare">
               <span class="target-corner target-corner--tl"></span>
               <span class="target-corner target-corner--tr"></span>
               <span class="target-corner target-corner--bl"></span>
@@ -2573,6 +2708,7 @@ function renderControls(controlType) {
 
     if (targetsJumpButton instanceof HTMLButtonElement) {
       targetsJumpButton.addEventListener("click", () => {
+        playNavDownSound();
         activateTargetsArea();
         const jumpTo = targetsLower instanceof HTMLElement
           ? targetsLower.offsetTop
@@ -2614,6 +2750,7 @@ function renderControls(controlType) {
     const removePopupImageConfirmEl = targets.querySelector("#helmet-remove-popup-image-confirm");
     const removePopupImageCancelEl = targets.querySelector("#helmet-remove-popup-image-cancel");
     const removeImageEl = targets.querySelector("#helmet-remove-image");
+    const baseHelmetDownloadEl = targets.querySelector(".target-btn--download");
     const descriptionBoxEl = targets.querySelector(".target-btn--description");
     const uploadBoxEl = targets.querySelector(".target-btn--upload");
     const sendImageIconEl = sendImageEl instanceof HTMLButtonElement
@@ -2775,6 +2912,7 @@ function renderControls(controlType) {
       if (popupEl === sendPopupImageEl && sendPopupImageConsentEl instanceof HTMLInputElement) {
         sendPopupImageConsentEl.checked = false;
       }
+      playHelmetActionSound();
       popupEl.setAttribute("aria-hidden", "false");
       window.requestAnimationFrame(() => {
         popupEl.classList.add("is-open");
@@ -2889,6 +3027,7 @@ function renderControls(controlType) {
         return;
       }
       previewUrl = URL.createObjectURL(file);
+      imagePreviewEl.addEventListener("load", playHelmetActionSound, { once: true });
       imagePreviewEl.src = previewUrl;
       imagePreviewEl.classList.remove("is-hidden");
       syncImageSendIconVariant(true);
@@ -2896,6 +3035,11 @@ function renderControls(controlType) {
 
     if (fileInputEl instanceof HTMLInputElement) {
       fileInputEl.addEventListener("change", refreshPreview);
+    }
+    if (baseHelmetDownloadEl instanceof HTMLAnchorElement) {
+      baseHelmetDownloadEl.addEventListener("click", () => {
+        playHelmetActionSound();
+      });
     }
 
     const performHelmetTextSubmit = async () => {
@@ -2969,6 +3113,7 @@ function renderControls(controlType) {
       sendPopupTextCancelEl.addEventListener("click", (event) => {
         event.preventDefault();
         event.stopPropagation();
+        playChoiceSound("no");
         closeHelmetSendPopup(sendPopupTextEl, sendTextEl);
       });
     }
@@ -2977,6 +3122,7 @@ function renderControls(controlType) {
       sendPopupTextConfirmEl.addEventListener("click", (event) => {
         event.preventDefault();
         event.stopPropagation();
+        playChoiceSound("yes");
         void performHelmetTextSubmit();
       });
     }
@@ -3081,6 +3227,7 @@ function renderControls(controlType) {
       sendPopupImageCancelEl.addEventListener("click", (event) => {
         event.preventDefault();
         event.stopPropagation();
+        playChoiceSound("no");
         closeHelmetSendPopup(sendPopupImageEl, sendImageEl);
       });
     }
@@ -3089,6 +3236,7 @@ function renderControls(controlType) {
       sendPopupImageConfirmEl.addEventListener("click", (event) => {
         event.preventDefault();
         event.stopPropagation();
+        playChoiceSound("yes");
         void performHelmetImageSubmit();
       });
     }
@@ -3265,10 +3413,11 @@ function onTouchEnd(event) {
   const minDistanceFirstSlide = 22;
 
   if (current === 0) {
-    if (Math.abs(diffY) < minDistanceFirstSlide) {
+    if (diffY > -minDistanceFirstSlide) {
       return;
     }
 
+    playNavDownSound();
     next();
     return;
   }
@@ -3335,6 +3484,7 @@ document.addEventListener("keydown", (event) => {
 });
 
 popupCloseEl.addEventListener("click", () => {
+  playPopupCloseSound();
   closeProfilePopup();
 });
 popupEl.addEventListener("click", (event) => {
@@ -3345,13 +3495,16 @@ popupEl.addEventListener("click", (event) => {
 
 chatLauncherEl.addEventListener("click", () => {
   if (isChatOpen) {
+    playPopupCloseSound();
     closeChatPanel();
   } else {
+    playAiPanelSound();
     openChatPanel();
   }
 });
 
 chatCloseEl.addEventListener("click", () => {
+  playPopupCloseSound();
   closeChatPanel();
 });
 
