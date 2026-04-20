@@ -821,6 +821,23 @@ const POPUP_ANIMATION_MS = 320;
 const CHOICE_ANIMATION_MS = 340;
 const CHOICE_SWEEP_BLUR_PX = 1.8;
 const HERO_CAROUSEL_INTERVAL_MS = 8000;
+const LAST_SLIDE_REACHED_STORAGE_KEY = "intesta_last_slide_reached_v1";
+
+function hasReachedLastSlideInStorage() {
+  try {
+    return window.localStorage.getItem(LAST_SLIDE_REACHED_STORAGE_KEY) === "1";
+  } catch (_error) {
+    return false;
+  }
+}
+
+function storeReachedLastSlide() {
+  try {
+    window.localStorage.setItem(LAST_SLIDE_REACHED_STORAGE_KEY, "1");
+  } catch (_error) {
+    // Ignore storage failures.
+  }
+}
 
 const app = document.querySelector("#app");
 
@@ -1006,7 +1023,7 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-let current = 0;
+let current = hasReachedLastSlideInStorage() ? TARGETS_SLIDE_INDEX : 0;
 let touchStartX = 0;
 let touchStartY = 0;
 let isAnimating = false;
@@ -3206,6 +3223,9 @@ function goTo(index) {
     hasTargetsScrolledDown = false;
   }
   current = safeIndex;
+  if (current === TARGETS_SLIDE_INDEX) {
+    storeReachedLastSlide();
+  }
   animateTransition();
   paint(current);
 }
