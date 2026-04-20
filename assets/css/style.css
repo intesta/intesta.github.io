@@ -2154,7 +2154,7 @@ b{
   margin-left: calc(50% - 50vw);
   margin-right: calc(50% - 50vw);
   min-height: 100svh;
-  margin-top: 0;
+  margin-top: -50px;
   padding: 16px 24px 34px;
   box-sizing: border-box;
   display: grid;
@@ -2163,7 +2163,6 @@ b{
   border-top-right-radius: 30px;
   background: #1A1A1A;
   overflow: hidden;
-  top: -50px;
 }
 
 .helmet-event-details-content {
