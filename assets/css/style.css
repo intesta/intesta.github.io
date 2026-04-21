@@ -515,6 +515,7 @@ b{
   margin-left: calc(50% - 50dvw);
   margin-right: calc(50% - 50dvw);
   height: 25px;
+  background: rgba(255, 255, 255, 0.5);
   border-top: 1px solid #000;
   border-bottom: 1px solid #000;
   overflow: hidden;
@@ -542,7 +543,7 @@ b{
   white-space: nowrap;
   flex: 0 0 auto;
   padding-right: clamp(24px, 6vw, 42px);
-  color: #000;
+  color: rgba(0, 0, 0, 0.5);
   font-size: 12px;
   line-height: 1;
   letter-spacing: -0.02em;
@@ -2265,10 +2266,14 @@ b{
   position: fixed;
   left: 50%;
   right: auto;
-  top: calc(100svh - var(--helmet-details-overlap) - var(--helmet-jump-gap) - var(--helmet-jump-size));
+  top: calc(100svh - var(--helmet-details-overlap) - var(--helmet-jump-gap) - var(--helmet-jump-size) - 15px);
   bottom: auto;
   z-index: 3;
   transform: translateX(-50%);
+}
+
+.helmet-event-jump .icon-svg--down {
+  animation: chevron-bounce-y 1.25s ease-in-out infinite;
 }
 
 .profile-popup.is-helmet-event-mode .profile-popup-close {
