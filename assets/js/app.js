@@ -50,8 +50,9 @@ const NAV_DOWN_SOUND_URL = "./assets/sounds/lowFrequency_explosion_000.ogg";
 const CHOICE_NO_SOUND_URL = "./assets/sounds/forceField_002.ogg";
 const CHOICE_YES_SOUND_URL = "./assets/sounds/forceField_003.ogg";
 const HELMET_ACTION_SOUND_URL = "./assets/sounds/impactMetal_001.ogg";
-const AI_PANEL_SOUND_URL = "./assets/sounds/spaceEngineLow_001.ogg";
+const AI_PANEL_SOUND_URL = "./assets/sounds/impactMetal_003.ogg";
 const QUESTION_TYPEWRITER_SOUND_URL = "./assets/sounds/spaceEngineLow_000.ogg";
+const CHATBOT_TYPEWRITER_SOUND_URL = "./assets/sounds/spaceEngineLow_001.ogg";
 const GALLERY_HEART_SOUND_URL = "./assets/sounds/laserSmall_004.ogg";
 const POPUP_CLOSE_SOUND_URL = "./assets/sounds/impactMetal_004.ogg";
 const NAV_DOWN_SOUND_VOLUME = 0.83;
@@ -59,7 +60,8 @@ const CHOICE_SOUND_VOLUME = 0.31;
 const HELMET_ACTION_SOUND_VOLUME = 0.93;
 const AI_PANEL_SOUND_VOLUME = 0.93;
 const AI_PANEL_SOUND_MAX_DURATION_MS = 250;
-const QUESTION_TYPEWRITER_SOUND_VOLUME = 0.5;
+const QUESTION_TYPEWRITER_SOUND_VOLUME = 0.22;
+const CHATBOT_TYPEWRITER_SOUND_VOLUME = 0.16;
 const GALLERY_HEART_SOUND_VOLUME = 0.56;
 const POPUP_CLOSE_SOUND_VOLUME = 0.93;
 const uiSoundCache = new Map();
@@ -153,6 +155,26 @@ function playQuestionTypewriterSound(char) {
 
 function stopQuestionTypewriterSound() {
   const soundEl = uiSoundCache.get("question-typewriter");
+  if (!(soundEl instanceof HTMLAudioElement)) {
+    return;
+  }
+  try {
+    soundEl.pause();
+    soundEl.currentTime = 0;
+  } catch (_error) {
+    // Ignore transient playback errors.
+  }
+}
+
+function playChatbotTypewriterSound(char) {
+  if (typeof char !== "string" || !char.trim()) {
+    return;
+  }
+  playUiSound(getUiSound("chatbot-typewriter", CHATBOT_TYPEWRITER_SOUND_URL, CHATBOT_TYPEWRITER_SOUND_VOLUME));
+}
+
+function stopChatbotTypewriterSound() {
+  const soundEl = uiSoundCache.get("chatbot-typewriter");
   if (!(soundEl instanceof HTMLAudioElement)) {
     return;
   }
@@ -2328,12 +2350,14 @@ async function appendAssistantMessageTypewriter(text) {
   for (let i = 0; i < fullText.length; i += 1) {
     progressiveText += fullText[i];
     msg.innerHTML = renderAssistantMessageHtml(progressiveText);
+    playChatbotTypewriterSound(fullText[i]);
     scrollAiChatToBottom(msg);
     await sleep(16);
   }
 
   keepAutoScroll = false;
   msg.classList.remove("ai-chat-msg--typewriter");
+  stopChatbotTypewriterSound();
   scrollAiChatToBottom(msg);
   return msg;
 }
@@ -2362,6 +2386,7 @@ async function submitChatMessage(rawMessage) {
     const reply = await getAssistantReply(userMessage);
     await appendAssistantMessageTypewriter(reply);
   } finally {
+    stopChatbotTypewriterSound();
     hideTypingIndicator();
     setChatPendingState(false);
     chatInputEl.focus();
