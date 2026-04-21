@@ -1182,6 +1182,9 @@ app.innerHTML = `
     </div>
   </section>
   <section class="ai-chat" id="ai-chat" aria-label="Chat assistente AI">
+    <div class="ai-chat-tooltip" id="ai-chat-tooltip" aria-hidden="true">
+      <span class="ai-chat-tooltip-text" id="ai-chat-tooltip-text"></span>
+    </div>
     <button class="ai-chat-launcher" id="ai-chat-launcher" type="button" aria-label="Apri chat assistente">
       <img class="ai-chat-launcher-image" src="./assets/images/AI.png" alt="" aria-hidden="true" />
     </button>
@@ -1225,6 +1228,8 @@ const galleryLikeBtnEl = app.querySelector("#gallery-like-btn");
 const galleryLikeIconEl = app.querySelector(".gallery-like-icon");
 const galleryLikeCountEl = app.querySelector("#gallery-like-count");
 const chatRootEl = app.querySelector("#ai-chat");
+const chatTooltipEl = app.querySelector("#ai-chat-tooltip");
+const chatTooltipTextEl = app.querySelector("#ai-chat-tooltip-text");
 const chatLauncherEl = app.querySelector("#ai-chat-launcher");
 const chatPanelEl = app.querySelector("#ai-chat-panel");
 const chatCloseEl = app.querySelector("#ai-chat-close");
@@ -1319,6 +1324,9 @@ let popupCloseTimer = null;
 let currentPopupMode = "profile";
 let hasTargetsScrolledDown = false;
 let isChatOpen = false;
+let hasAiTooltipPlayed = false;
+let aiTooltipTypingTimerId = null;
+let aiTooltipHideOnScrollTimerId = null;
 let isChatRequestPending = false;
 let fetchedGeminiApiKey = "";
 let typingIndicatorEl = null;
@@ -2401,9 +2409,15 @@ async function getAssistantReply(userMessage) {
     return "Ho ricevuto la tua domanda. API key non disponibile: configura il server endpoint /intesta_api/gemini-key.";
   }
 
-  const modelCandidates = Array.isArray(geminiConfig.models) && geminiConfig.models.length > 0
-    ? geminiConfig.models
-    : [geminiConfig.model || "gemini-2.0-flash-lite", "gemma-3-27b-it"];
+  const configuredModels = Array.isArray(geminiConfig.models) ? geminiConfig.models : [];
+  const defaultFallbackModels = [geminiConfig.model || "gemini-2.0-flash-lite", "gemma-3-27b-it"];
+  const modelCandidates = Array.from(
+    new Set(
+      [...configuredModels, ...defaultFallbackModels]
+        .map((model) => String(model || "").trim())
+        .filter(Boolean)
+    )
+  );
   const systemPrompt = geminiConfig.systemPrompt || `
 Sei l'assistente ufficiale del sito Intesta.
 Usa solo il contesto fornito qui sotto e non inventare dettagli mancanti.
@@ -2489,7 +2503,7 @@ Se manca un dato:
     }
   }
 
-  if (hadQuotaError) {
+  if (hadQuotaError && !hadTemporaryError) {
     return "In questo momento la quota AI giornaliera e terminata. Riprova tra poco.";
   }
   if (hadTemporaryError) {
@@ -2542,16 +2556,87 @@ function closeChatPanel() {
   syncAiChatDocking();
 }
 
+function clearAiTooltipTypingTimer() {
+  if (aiTooltipTypingTimerId !== null) {
+    window.clearTimeout(aiTooltipTypingTimerId);
+    aiTooltipTypingTimerId = null;
+  }
+}
+
+function clearAiTooltipHideOnScrollTimer() {
+  if (aiTooltipHideOnScrollTimerId !== null) {
+    window.clearTimeout(aiTooltipHideOnScrollTimerId);
+    aiTooltipHideOnScrollTimerId = null;
+  }
+}
+
+function hideAiChatTooltip() {
+  clearAiTooltipTypingTimer();
+  clearAiTooltipHideOnScrollTimer();
+  if (!(chatTooltipEl instanceof HTMLElement) || !(chatTooltipTextEl instanceof HTMLElement)) {
+    return;
+  }
+  chatTooltipTextEl.classList.remove("is-typing");
+  chatTooltipEl.classList.remove("is-visible");
+  chatTooltipEl.setAttribute("aria-hidden", "true");
+}
+
+function scheduleAiTooltipHideOnScroll() {
+  if (!(chatTooltipEl instanceof HTMLElement) || aiTooltipHideOnScrollTimerId !== null) {
+    return;
+  }
+  if (!chatTooltipEl.classList.contains("is-visible")) {
+    return;
+  }
+  aiTooltipHideOnScrollTimerId = window.setTimeout(() => {
+    hideAiChatTooltip();
+  }, 500);
+}
+
+function playAiChatTooltipIntro() {
+  if (
+    hasAiTooltipPlayed ||
+    !(chatTooltipEl instanceof HTMLElement) ||
+    !(chatTooltipTextEl instanceof HTMLElement)
+  ) {
+    return;
+  }
+  hasAiTooltipPlayed = true;
+  clearAiTooltipTypingTimer();
+  const placeholderChar = "\u00a0";
+  const placeholderLength = 4;
+  chatTooltipTextEl.textContent = placeholderChar.repeat(placeholderLength);
+  chatTooltipTextEl.classList.add("is-typing");
+  chatTooltipEl.classList.add("is-visible");
+  chatTooltipEl.setAttribute("aria-hidden", "false");
+
+  const fullText = "ciao";
+  let cursor = 0;
+  const tick = () => {
+    cursor += 1;
+    const remainingPlaceholderCount = Math.max(0, placeholderLength - cursor);
+    chatTooltipTextEl.textContent = `${fullText.slice(0, cursor)}${placeholderChar.repeat(remainingPlaceholderCount)}`;
+    if (cursor >= fullText.length) {
+      chatTooltipTextEl.classList.remove("is-typing");
+      aiTooltipTypingTimerId = null;
+      return;
+    }
+    aiTooltipTypingTimerId = window.setTimeout(tick, 120);
+  };
+  aiTooltipTypingTimerId = window.setTimeout(tick, 130);
+}
+
 function openChatPanel() {
   isChatOpen = true;
   chatRootEl.classList.add("is-open");
   chatPanelEl.setAttribute("aria-hidden", "false");
+  hideAiChatTooltip();
   chatInputEl.focus();
   syncAiChatDocking();
 }
 
 function syncAiChatDocking() {
-  const shouldManageDock = current === TARGETS_SLIDE_INDEX && popupEl.hidden && hasTargetsScrolledDown;
+  const shouldManageDock = current === TARGETS_SLIDE_INDEX && popupEl.hidden;
   if (!shouldManageDock) {
     chatRootEl.classList.remove("is-docked");
     chatRootEl.style.setProperty("--ai-dock-shift", "0px");
@@ -2593,17 +2678,20 @@ function syncAiChatDocking() {
 
 function syncChatVisibility() {
   const isLastSlide = current === TARGETS_SLIDE_INDEX;
-  const shouldShow = isLastSlide && popupEl.hidden && hasTargetsScrolledDown;
+  const shouldShow = isLastSlide && popupEl.hidden;
   chatRootEl.classList.toggle("is-available", shouldShow);
 
   const jumpButton = controlsEl.querySelector("#targets-jump-btn");
   if (jumpButton instanceof HTMLButtonElement) {
-    const showJump = isLastSlide && popupEl.hidden && !hasTargetsScrolledDown;
+    const showJump = isLastSlide && popupEl.hidden;
     jumpButton.classList.toggle("is-hidden", !showJump);
   }
 
   if (!shouldShow) {
+    hideAiChatTooltip();
     closeChatPanel();
+  } else if (!isChatOpen) {
+    playAiChatTooltipIntro();
   }
   syncAiChatDocking();
 }
@@ -3276,6 +3364,7 @@ function renderControls(controlType) {
     const onTargetsScroll = () => {
       if (controlsEl.scrollTop > 10) {
         activateTargetsArea();
+        scheduleAiTooltipHideOnScroll();
       }
       syncAiChatDocking();
     };
