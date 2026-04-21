@@ -946,7 +946,10 @@ b{
   inset: 0;
   z-index: 140;
   display: grid;
-  place-items: center;
+  justify-items: center;
+  align-items: start;
+  padding: 20px var(--site-side) 24px;
+  box-sizing: border-box;
 }
 
 .gallery-preview[hidden] {
@@ -973,6 +976,7 @@ b{
   display: grid;
   justify-items: center;
   gap: 14px;
+  margin-top: 50px;
   opacity: 0;
   transform: translateY(12px) scale(0.975);
   transition: opacity 220ms var(--motion-ease), transform 220ms var(--motion-ease);
