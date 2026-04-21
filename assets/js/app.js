@@ -41,7 +41,8 @@ const STATIC_SOUND_PRELOAD_URLS = [
   "./assets/sounds/forceField_002.ogg",
   "./assets/sounds/forceField_003.ogg",
   "./assets/sounds/impactMetal_001.ogg",
-  "./assets/sounds/impactMetal_003.ogg",
+  "./assets/sounds/spaceEngineLow_001.ogg",
+  "./assets/sounds/spaceEngineLow_000.ogg",
   "./assets/sounds/laserSmall_004.ogg",
   "./assets/sounds/impactMetal_004.ogg"
 ];
@@ -49,16 +50,20 @@ const NAV_DOWN_SOUND_URL = "./assets/sounds/lowFrequency_explosion_000.ogg";
 const CHOICE_NO_SOUND_URL = "./assets/sounds/forceField_002.ogg";
 const CHOICE_YES_SOUND_URL = "./assets/sounds/forceField_003.ogg";
 const HELMET_ACTION_SOUND_URL = "./assets/sounds/impactMetal_001.ogg";
-const AI_PANEL_SOUND_URL = "./assets/sounds/impactMetal_003.ogg";
+const AI_PANEL_SOUND_URL = "./assets/sounds/spaceEngineLow_001.ogg";
+const QUESTION_TYPEWRITER_SOUND_URL = "./assets/sounds/spaceEngineLow_000.ogg";
 const GALLERY_HEART_SOUND_URL = "./assets/sounds/laserSmall_004.ogg";
 const POPUP_CLOSE_SOUND_URL = "./assets/sounds/impactMetal_004.ogg";
 const NAV_DOWN_SOUND_VOLUME = 0.83;
 const CHOICE_SOUND_VOLUME = 0.31;
 const HELMET_ACTION_SOUND_VOLUME = 0.93;
 const AI_PANEL_SOUND_VOLUME = 0.93;
+const AI_PANEL_SOUND_MAX_DURATION_MS = 250;
+const QUESTION_TYPEWRITER_SOUND_VOLUME = 0.5;
 const GALLERY_HEART_SOUND_VOLUME = 0.56;
 const POPUP_CLOSE_SOUND_VOLUME = 0.93;
 const uiSoundCache = new Map();
+let aiPanelSoundStopTimerId = null;
 
 function getUiSound(soundKey, sourceUrl, volume = 1) {
   const cachedSound = uiSoundCache.get(soundKey);
@@ -115,11 +120,48 @@ function playHelmetActionSound() {
 }
 
 function playAiPanelSound() {
-  playUiSound(getUiSound("ai-panel", AI_PANEL_SOUND_URL, AI_PANEL_SOUND_VOLUME));
+  const soundEl = getUiSound("ai-panel", AI_PANEL_SOUND_URL, AI_PANEL_SOUND_VOLUME);
+  playUiSound(soundEl);
+  if (!(soundEl instanceof HTMLAudioElement)) {
+    return;
+  }
+  if (aiPanelSoundStopTimerId !== null) {
+    window.clearTimeout(aiPanelSoundStopTimerId);
+  }
+  aiPanelSoundStopTimerId = window.setTimeout(() => {
+    try {
+      soundEl.pause();
+      soundEl.currentTime = 0;
+    } catch (_error) {
+      // Ignore transient playback errors.
+    } finally {
+      aiPanelSoundStopTimerId = null;
+    }
+  }, AI_PANEL_SOUND_MAX_DURATION_MS);
 }
 
 function playGalleryHeartSound() {
   playUiSound(getUiSound("gallery-heart", GALLERY_HEART_SOUND_URL, GALLERY_HEART_SOUND_VOLUME));
+}
+
+function playQuestionTypewriterSound(char) {
+  if (typeof char !== "string" || !char.trim()) {
+    return;
+  }
+  playUiSound(getUiSound("question-typewriter", QUESTION_TYPEWRITER_SOUND_URL, QUESTION_TYPEWRITER_SOUND_VOLUME));
+}
+
+function stopQuestionTypewriterSound() {
+  const soundEl = uiSoundCache.get("question-typewriter");
+  if (!(soundEl instanceof HTMLAudioElement)) {
+    return;
+  }
+  try {
+    soundEl.pause();
+    soundEl.currentTime = 0;
+  } catch (_error) {
+    // Ignore transient playback errors.
+  }
 }
 
 function normalizeHeroUiTone(value) {
@@ -2758,6 +2800,7 @@ function clearTargetsTypewriterState() {
     window.clearTimeout(timerId);
   });
   targetsTypewriterTimerIds.clear();
+  stopQuestionTypewriterSound();
 }
 
 function scheduleTargetsTypewriterTick(callback, delayMs) {
@@ -2778,6 +2821,7 @@ function startTargetsElementTypewriter(el) {
   if (!(el instanceof HTMLElement) || el.dataset.typewriterDone === "1") {
     return;
   }
+  const shouldPlayTypewriterSound = el.dataset.typewriterSound === "question";
   const sourceText = normalizeTypewriterSourceText(el.dataset.typewriterText || el.textContent || "");
   if (!sourceText) {
     el.dataset.typewriterDone = "1";
@@ -2792,7 +2836,14 @@ function startTargetsElementTypewriter(el) {
   const tick = () => {
     cursor += 1;
     el.textContent = sourceText.slice(0, cursor);
+    if (shouldPlayTypewriterSound) {
+      const currentChar = sourceText.charAt(cursor - 1);
+      playQuestionTypewriterSound(currentChar);
+    }
     if (cursor >= sourceText.length) {
+      if (shouldPlayTypewriterSound) {
+        stopQuestionTypewriterSound();
+      }
       return;
     }
     const lastChar = sourceText.charAt(cursor - 1);
@@ -2994,7 +3045,7 @@ function renderControls(controlType) {
             <span class="target-corner target-corner--tr"></span>
             <span class="target-corner target-corner--bl"></span>
             <span class="target-corner target-corner--br"></span>
-            <p class="targets-claim" data-typewriter-text="Inventiamo un casco&#10;da bici bellissimo!">Inventiamo un casco<br />da bici bellissimo!</p>
+            <p class="targets-claim" data-typewriter-text="Inventiamo un casco&#10;da bici bellissimo!" data-typewriter-sound="question">Inventiamo un casco<br />da bici bellissimo!</p>
             <button class="targets-jump-btn" id="targets-jump-btn" type="button" aria-label="Scorri ai target profilo e casco">
               <img class="icon-svg icon-svg--down" src="./assets/images/chevrons-down.svg" alt="" aria-hidden="true" />
             </button>
@@ -3868,6 +3919,7 @@ function clearQuestionTypingTimer() {
     window.clearTimeout(questionTypingTimerId);
     questionTypingTimerId = null;
   }
+  stopQuestionTypewriterSound();
 }
 
 function updateQuestionTitleTyping(activeIndex) {
@@ -3898,6 +3950,7 @@ function updateQuestionTitleTyping(activeIndex) {
 
   if (!fullTitle) {
     activeTitleEl.classList.remove("is-typing");
+    stopQuestionTypewriterSound();
     return;
   }
 
@@ -3908,9 +3961,11 @@ function updateQuestionTitleTyping(activeIndex) {
     }
     cursor += 1;
     activeTitleEl.textContent = fullTitle.slice(0, cursor);
+    playQuestionTypewriterSound(fullTitle.charAt(cursor - 1));
     if (cursor >= fullTitle.length) {
       activeTitleEl.classList.remove("is-typing");
       questionTypingTimerId = null;
+      stopQuestionTypewriterSound();
       return;
     }
     const lastChar = fullTitle.charAt(cursor - 1);
