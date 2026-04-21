@@ -1032,6 +1032,11 @@ const TARGETS_SLIDE_INDEX = 4;
 const POPUP_ANIMATION_MS = 320;
 const CHOICE_ANIMATION_MS = 340;
 const CHOICE_SWEEP_BLUR_PX = 1.8;
+const QUESTION_TYPEWRITER_DELAY_MS = 34;
+const QUESTION_TYPEWRITER_PUNCT_DELAY_MS = 120;
+const TARGETS_DIVIDER_SCROLL_SPEED_PX_PER_SEC = 38;
+const TARGETS_TEXT_TYPEWRITER_DELAY_MS = 24;
+const TARGETS_TEXT_TYPEWRITER_PUNCT_DELAY_MS = 90;
 const HERO_CAROUSEL_INTERVAL_MS = 2500;
 const LAST_SLIDE_REACHED_STORAGE_KEY = "intesta_last_slide_reached_v1";
 
@@ -1049,6 +1054,10 @@ function storeReachedLastSlide() {
   } catch (_error) {
     // Ignore storage failures.
   }
+}
+
+function getLandingDestinationIndex() {
+  return hasReachedLastSlideInStorage() ? TARGETS_SLIDE_INDEX : 1;
 }
 
 const app = document.querySelector("#app");
@@ -1235,7 +1244,7 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-let current = hasReachedLastSlideInStorage() ? TARGETS_SLIDE_INDEX : 0;
+let current = 0;
 let touchStartX = 0;
 let touchStartY = 0;
 let isAnimating = false;
@@ -1254,6 +1263,11 @@ let isDeviceLocked = false;
 let lockedContribution = null;
 let toastTimerId = null;
 let galleryPreviewCloseTimerId = null;
+let questionTypingTimerId = null;
+let questionTypingRunId = 0;
+let targetsDividerResizeHandler = null;
+let targetsTextObserver = null;
+const targetsTypewriterTimerIds = new Set();
 const GALLERY_PREVIEW_ANIMATION_MS = 220;
 let currentGalleryPreviewSrc = "";
 let currentGalleryPreviewAssetKey = "";
@@ -1461,7 +1475,7 @@ const popupContent = {
               Se hai tra i 16-20 anni e vuoi partecipare da solo o con amici contattami.
             </p>
             <p class="helmet-event-details-contact">
-              <a href="https://www.instagram.com/tomas._.berardi" target="_blank" rel="noopener noreferrer">@tomas._.berardi</a><br />
+              <a href="https://www.instagram.com/intesta.26/" target="_blank" rel="noopener noreferrer">@intesta.26</a><br />
               +39 331 380 9922<br />
               intesta2026@gmail.com
             </p>
@@ -2685,7 +2699,199 @@ function handleChoice(choice) {
   });
 }
 
+function buildTargetsDividerCopies(trackEl) {
+  if (!(trackEl instanceof HTMLElement)) {
+    return;
+  }
+  const dividerEl = trackEl.closest(".targets-divider");
+  if (!(dividerEl instanceof HTMLElement)) {
+    return;
+  }
+  const rawLabel = typeof dividerEl.dataset.dividerLabel === "string" ? dividerEl.dataset.dividerLabel.trim() : "";
+  const label = rawLabel || "cliccami";
+  trackEl.textContent = "";
+
+  const sample = document.createElement("span");
+  sample.className = "targets-divider-copy";
+  sample.textContent = label;
+  trackEl.append(sample);
+
+  const sampleWidth = Math.max(1, sample.getBoundingClientRect().width);
+  const dividerWidth = Math.max(1, dividerEl.getBoundingClientRect().width || window.innerWidth || 320);
+  const copiesPerChunk = Math.max(8, Math.ceil(dividerWidth / sampleWidth) + 2);
+
+  trackEl.textContent = "";
+  const fragment = document.createDocumentFragment();
+  for (let i = 0; i < copiesPerChunk * 2; i += 1) {
+    const item = document.createElement("span");
+    item.className = "targets-divider-copy";
+    item.textContent = label;
+    fragment.append(item);
+  }
+  trackEl.append(fragment);
+
+  const totalTrackWidth = Math.max(1, trackEl.scrollWidth);
+  const loopDistancePx = totalTrackWidth / 2;
+  const durationSec = loopDistancePx / TARGETS_DIVIDER_SCROLL_SPEED_PX_PER_SEC;
+  trackEl.style.animationDuration = `${Math.max(6, durationSec).toFixed(2)}s`;
+}
+
+function buildAllTargetsDividers(scopeEl) {
+  if (!(scopeEl instanceof HTMLElement)) {
+    return;
+  }
+  const trackEls = scopeEl.querySelectorAll(".targets-divider-track");
+  trackEls.forEach((trackEl, index) => {
+    buildTargetsDividerCopies(trackEl);
+    if (trackEl instanceof HTMLElement) {
+      trackEl.style.animationDirection = index % 2 === 0 ? "reverse" : "normal";
+    }
+  });
+}
+
+function clearTargetsTypewriterState() {
+  if (targetsTextObserver) {
+    targetsTextObserver.disconnect();
+    targetsTextObserver = null;
+  }
+  targetsTypewriterTimerIds.forEach((timerId) => {
+    window.clearTimeout(timerId);
+  });
+  targetsTypewriterTimerIds.clear();
+}
+
+function scheduleTargetsTypewriterTick(callback, delayMs) {
+  const timerId = window.setTimeout(() => {
+    targetsTypewriterTimerIds.delete(timerId);
+    callback();
+  }, delayMs);
+  targetsTypewriterTimerIds.add(timerId);
+}
+
+function normalizeTypewriterSourceText(value) {
+  const rawText = String(value || "").replace(/\r\n?/g, "\n");
+  const lines = rawText.split("\n").map((line) => line.replace(/\s+/g, " ").trim());
+  return lines.join("\n").trim();
+}
+
+function startTargetsElementTypewriter(el) {
+  if (!(el instanceof HTMLElement) || el.dataset.typewriterDone === "1") {
+    return;
+  }
+  const sourceText = normalizeTypewriterSourceText(el.dataset.typewriterText || el.textContent || "");
+  if (!sourceText) {
+    el.dataset.typewriterDone = "1";
+    return;
+  }
+  el.dataset.typewriterDone = "1";
+  el.textContent = "";
+  if (sourceText.includes("\n")) {
+    el.classList.add("is-typewriter-preline");
+  }
+  let cursor = 0;
+  const tick = () => {
+    cursor += 1;
+    el.textContent = sourceText.slice(0, cursor);
+    if (cursor >= sourceText.length) {
+      return;
+    }
+    const lastChar = sourceText.charAt(cursor - 1);
+    const delay = /[?!.,:;]/.test(lastChar)
+      ? TARGETS_TEXT_TYPEWRITER_PUNCT_DELAY_MS
+      : TARGETS_TEXT_TYPEWRITER_DELAY_MS;
+    scheduleTargetsTypewriterTick(tick, delay);
+  };
+  scheduleTargetsTypewriterTick(tick, TARGETS_TEXT_TYPEWRITER_DELAY_MS);
+}
+
+function startTargetsPlaceholderTypewriter(inputEl) {
+  if (!(inputEl instanceof HTMLElement) || inputEl.dataset.typewriterPlaceholderDone === "1") {
+    return;
+  }
+  const fallbackPlaceholder = inputEl.getAttribute("placeholder") || "";
+  const sourceText = normalizeTypewriterSourceText(inputEl.dataset.typewriterPlaceholder || fallbackPlaceholder);
+  if (!sourceText) {
+    inputEl.dataset.typewriterPlaceholderDone = "1";
+    return;
+  }
+  inputEl.dataset.typewriterPlaceholderDone = "1";
+  inputEl.setAttribute("placeholder", "");
+  let cursor = 0;
+  const tick = () => {
+    cursor += 1;
+    inputEl.setAttribute("placeholder", sourceText.slice(0, cursor));
+    if (cursor >= sourceText.length) {
+      return;
+    }
+    const lastChar = sourceText.charAt(cursor - 1);
+    const delay = /[?!.,:;]/.test(lastChar)
+      ? TARGETS_TEXT_TYPEWRITER_PUNCT_DELAY_MS
+      : TARGETS_TEXT_TYPEWRITER_DELAY_MS;
+    scheduleTargetsTypewriterTick(tick, delay);
+  };
+  scheduleTargetsTypewriterTick(tick, TARGETS_TEXT_TYPEWRITER_DELAY_MS);
+}
+
+function setupTargetsTypewriters(scopeEl) {
+  if (!(scopeEl instanceof HTMLElement)) {
+    return;
+  }
+  clearTargetsTypewriterState();
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting || entry.intersectionRatio < 0.45) {
+        return;
+      }
+      const targetEl = entry.target;
+      if (!(targetEl instanceof HTMLElement)) {
+        return;
+      }
+      if (targetEl.hasAttribute("data-typewriter-text")) {
+        startTargetsElementTypewriter(targetEl);
+      }
+      if (targetEl.hasAttribute("data-typewriter-placeholder")) {
+        startTargetsPlaceholderTypewriter(targetEl);
+      }
+      if (
+        targetEl.dataset.typewriterDone === "1" &&
+        targetEl.dataset.typewriterPlaceholderDone === "1"
+      ) {
+        observer.unobserve(targetEl);
+      }
+      if (
+        targetEl.hasAttribute("data-typewriter-text") &&
+        !targetEl.hasAttribute("data-typewriter-placeholder") &&
+        targetEl.dataset.typewriterDone === "1"
+      ) {
+        observer.unobserve(targetEl);
+      }
+      if (
+        targetEl.hasAttribute("data-typewriter-placeholder") &&
+        !targetEl.hasAttribute("data-typewriter-text") &&
+        targetEl.dataset.typewriterPlaceholderDone === "1"
+      ) {
+        observer.unobserve(targetEl);
+      }
+    });
+  }, {
+    root: controlsEl instanceof HTMLElement ? controlsEl : null,
+    threshold: [0.45]
+  });
+  targetsTextObserver = observer;
+
+  const typewriterEls = scopeEl.querySelectorAll("[data-typewriter-text], [data-typewriter-placeholder]");
+  typewriterEls.forEach((el) => {
+    observer.observe(el);
+  });
+}
+
 function renderControls(controlType) {
+  if (typeof targetsDividerResizeHandler === "function") {
+    window.removeEventListener("resize", targetsDividerResizeHandler);
+    targetsDividerResizeHandler = null;
+  }
+  clearTargetsTypewriterState();
+
   if (legalDockEl && legalDockEl.parentElement === controlsEl) {
     legalDockEl.classList.remove("is-inline-footer");
     legalLinkEls.forEach((linkEl) => {
@@ -2788,12 +2994,16 @@ function renderControls(controlType) {
             <span class="target-corner target-corner--tr"></span>
             <span class="target-corner target-corner--bl"></span>
             <span class="target-corner target-corner--br"></span>
-            <p class="targets-claim">Inventiamo un casco<br />da bici bellissimo!</p>
+            <p class="targets-claim" data-typewriter-text="Inventiamo un casco&#10;da bici bellissimo!">Inventiamo un casco<br />da bici bellissimo!</p>
             <button class="targets-jump-btn" id="targets-jump-btn" type="button" aria-label="Scorri ai target profilo e casco">
               <img class="icon-svg icon-svg--down" src="./assets/images/chevrons-down.svg" alt="" aria-hidden="true" />
             </button>
           </section>
         </section>
+
+        <div class="targets-divider" data-divider-label="cliccami" aria-hidden="true">
+          <div class="targets-divider-track"></div>
+        </div>
 
         <section class="targets-screen targets-screen--pair" id="targets-lower">
           <button class="target-btn target-btn--profile" type="button" aria-label="Apri popup profilo">
@@ -2802,18 +3012,26 @@ function renderControls(controlType) {
             <span class="target-corner target-corner--bl"></span>
             <span class="target-corner target-corner--br"></span>
             <img class="target-image" src="./assets/images/tomas.png" alt="Ritratto di Tomas Berardi" />
+            <span class="target-discover-chip" aria-hidden="true">scopri</span>
           </button>
+          <div class="targets-divider" data-divider-label="new event" aria-hidden="true">
+            <div class="targets-divider-track"></div>
+          </div>
           <button class="target-btn target-btn--helmet" type="button" aria-label="Apri popup casco">
             <span class="target-corner target-corner--tl"></span>
             <span class="target-corner target-corner--tr"></span>
             <span class="target-corner target-corner--bl"></span>
             <span class="target-corner target-corner--br"></span>
             <img class="target-image target-image--helmet" src="./assets/images/casco.png" alt="Casco" />
+            <span class="target-discover-chip" aria-hidden="true">scopri</span>
           </button>
         </section>
 
         <section class="targets-screen targets-screen--pair" id="targets-upload">
           <div class="helmet-upload-form" id="helmet-upload-form">
+            <div class="targets-divider" data-divider-label="scrivimi" aria-hidden="true">
+              <div class="targets-divider-track"></div>
+            </div>
             <label class="target-btn target-btn--input target-btn--description" for="helmet-description">
               <span class="target-corner target-corner--tl"></span>
               <span class="target-corner target-corner--tr"></span>
@@ -2824,6 +3042,7 @@ function renderControls(controlType) {
                 id="helmet-description"
                 name="description"
                 maxlength="2000"
+                data-typewriter-placeholder="descrivi il casco che desideri&#10;..."
                 placeholder="descrivi il casco che desideri&#10;..."
                 aria-label="Descrizione casco"
               ></textarea>
@@ -2859,6 +3078,9 @@ function renderControls(controlType) {
               </div>
             </label>
 
+            <div class="targets-divider" data-divider-label="AI allowed" aria-hidden="true">
+              <div class="targets-divider-track"></div>
+            </div>
             <label class="target-btn target-btn--input target-btn--upload" for="helmet-image">
               <span class="target-corner target-corner--tl"></span>
               <span class="target-corner target-corner--tr"></span>
@@ -2872,7 +3094,7 @@ function renderControls(controlType) {
                 accept="${HELMET_UPLOAD_ALLOWED_EXTENSIONS.join(",")}"
               />
               <img class="helmet-upload-icon" src="./assets/images/upload.svg" alt="" aria-hidden="true" />
-              <p class="helmet-upload-copy">carica foto del casco che desideri</p>
+              <p class="helmet-upload-copy" data-typewriter-text="carica foto del casco che desideri">carica foto del casco che desideri</p>
               <img class="helmet-upload-preview is-hidden" id="helmet-image-preview" alt="Anteprima immagine casco caricata" />
               <button class="helmet-remove-btn helmet-remove-btn--image is-hidden" id="helmet-remove-image" type="button" aria-label="Elimina foto precedente">
                 <img class="helmet-remove-icon" src="./assets/images/close_popup.svg" alt="" aria-hidden="true" />
@@ -2932,6 +3154,9 @@ function renderControls(controlType) {
               </div>
             </label>
 
+            <div class="targets-divider" data-divider-label="your help" aria-hidden="true">
+              <div class="targets-divider-track"></div>
+            </div>
             <a class="target-btn target-btn--input target-btn--download" href="./assets/images/base_casco_intesta.jpg" download="base_casco_intesta.jpg" target="_blank" rel="noopener noreferrer" aria-label="Scarica casco su cui disegnare">
               <span class="target-corner target-corner--tl"></span>
               <span class="target-corner target-corner--tr"></span>
@@ -2939,10 +3164,14 @@ function renderControls(controlType) {
               <span class="target-corner target-corner--br"></span>
               <img class="helmet-download-bg" src="./assets/images/base_casco_intesta.png" alt="" aria-hidden="true" />
               <img class="helmet-download-icon" src="./assets/images/upload.svg" alt="" aria-hidden="true" />
-              <p class="helmet-download-copy">scarica casco<br />su cui disegnare</p>
+              <p class="helmet-download-copy" data-typewriter-text="scarica casco&#10;su cui disegnare">scarica casco<br />su cui disegnare</p>
             </a>
           </div>
         </section>
+
+        <div class="targets-divider" data-divider-label="catalogo" aria-hidden="true">
+          <div class="targets-divider-track"></div>
+        </div>
 
         <section class="targets-screen targets-screen--gallery">
           <section class="target-btn target-btn--gallery" aria-label="Mosaico contenuti casco">
@@ -3594,6 +3823,12 @@ function renderControls(controlType) {
     }
 
     controlsEl.append(targets);
+    buildAllTargetsDividers(targets);
+    setupTargetsTypewriters(targets);
+    targetsDividerResizeHandler = () => {
+      buildAllTargetsDividers(targets);
+    };
+    window.addEventListener("resize", targetsDividerResizeHandler);
     if (legalDockEl) {
       const footerContact = document.createElement("div");
       footerContact.className = "targets-contact-row";
@@ -3617,6 +3852,8 @@ function paint(index) {
     slideEl.classList.toggle("is-active", slideIndex === index);
   });
 
+  updateQuestionTitleTyping(index);
+
   subtitleEl.textContent = slides[index].subtitle;
   subtitleEl.classList.toggle("is-hidden", !slides[index].subtitle);
   renderControls(slides[index].control);
@@ -3624,6 +3861,64 @@ function paint(index) {
     ? `${slides[index].title}, ${slides[index].subtitle}`
     : slides[index].title;
   syncChatVisibility();
+}
+
+function clearQuestionTypingTimer() {
+  if (questionTypingTimerId !== null) {
+    window.clearTimeout(questionTypingTimerId);
+    questionTypingTimerId = null;
+  }
+}
+
+function updateQuestionTitleTyping(activeIndex) {
+  questionTypingRunId += 1;
+  clearQuestionTypingTimer();
+  const activeRunId = questionTypingRunId;
+
+  slideEls.forEach((slideEl, slideIndex) => {
+    const titleEl = slideEl.querySelector(".slide-title");
+    if (!(titleEl instanceof HTMLElement)) {
+      return;
+    }
+    titleEl.classList.remove("is-typing");
+    if (slideIndex !== activeIndex || slides[slideIndex].control !== "choice") {
+      titleEl.textContent = slides[slideIndex].title || "";
+    }
+  });
+
+  const activeSlide = slides[activeIndex];
+  const activeTitleEl = slideEls[activeIndex]?.querySelector(".slide-title");
+  if (!(activeTitleEl instanceof HTMLElement) || !activeSlide || activeSlide.control !== "choice") {
+    return;
+  }
+
+  const fullTitle = String(activeSlide.title || "");
+  activeTitleEl.textContent = "";
+  activeTitleEl.classList.add("is-typing");
+
+  if (!fullTitle) {
+    activeTitleEl.classList.remove("is-typing");
+    return;
+  }
+
+  let cursor = 0;
+  const tick = () => {
+    if (activeRunId !== questionTypingRunId) {
+      return;
+    }
+    cursor += 1;
+    activeTitleEl.textContent = fullTitle.slice(0, cursor);
+    if (cursor >= fullTitle.length) {
+      activeTitleEl.classList.remove("is-typing");
+      questionTypingTimerId = null;
+      return;
+    }
+    const lastChar = fullTitle.charAt(cursor - 1);
+    const delay = /[?!.,:;]/.test(lastChar) ? QUESTION_TYPEWRITER_PUNCT_DELAY_MS : QUESTION_TYPEWRITER_DELAY_MS;
+    questionTypingTimerId = window.setTimeout(tick, delay);
+  };
+
+  questionTypingTimerId = window.setTimeout(tick, QUESTION_TYPEWRITER_DELAY_MS);
 }
 
 function animateTransition() {
@@ -3663,6 +3958,11 @@ function goTo(index) {
 
 function next() {
   if (!popupEl.hidden) {
+    return;
+  }
+
+  if (current === 0) {
+    goTo(getLandingDestinationIndex());
     return;
   }
 
