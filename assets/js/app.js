@@ -1076,7 +1076,7 @@ const CHOICE_ANIMATION_MS = 340;
 const CHOICE_SWEEP_BLUR_PX = 1.8;
 const QUESTION_TYPEWRITER_DELAY_MS = 34;
 const QUESTION_TYPEWRITER_PUNCT_DELAY_MS = 120;
-const TARGETS_DIVIDER_SCROLL_SPEED_PX_PER_SEC = 38;
+const TARGETS_DIVIDER_SCROLL_SPEED_PX_PER_SEC = 28;
 const TARGETS_TEXT_TYPEWRITER_DELAY_MS = 24;
 const TARGETS_TEXT_TYPEWRITER_PUNCT_DELAY_MS = 90;
 const HERO_CAROUSEL_INTERVAL_MS = 2500;
@@ -2775,7 +2775,8 @@ function buildTargetsDividerCopies(trackEl) {
   const totalTrackWidth = Math.max(1, trackEl.scrollWidth);
   const loopDistancePx = totalTrackWidth / 2;
   const durationSec = loopDistancePx / TARGETS_DIVIDER_SCROLL_SPEED_PX_PER_SEC;
-  trackEl.style.animationDuration = `${Math.max(6, durationSec).toFixed(2)}s`;
+  trackEl.style.setProperty("--targets-divider-loop-distance", `${loopDistancePx}px`);
+  trackEl.style.animationDuration = `${Math.max(6, durationSec)}s`;
 }
 
 function buildAllTargetsDividers(scopeEl) {
