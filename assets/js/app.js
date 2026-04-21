@@ -1171,6 +1171,7 @@ app.innerHTML = `
           <i class="feather-x-square gallery-preview-close-icon" aria-hidden="true"></i>
         </button>
         <img class="gallery-preview-image" id="gallery-preview-image" src="" alt="Anteprima lavoro approvato" />
+        <p class="gallery-preview-status" id="gallery-preview-status" hidden>immagine in fase di approvazione</p>
         <div class="gallery-like-row">
           <button class="gallery-like-btn" id="gallery-like-btn" type="button" aria-label="Metti mi piace alla foto">
             <img class="gallery-like-icon" src="./assets/images/empty-like.svg" alt="" aria-hidden="true" />
@@ -1223,6 +1224,7 @@ const galleryPreviewEl = app.querySelector("#gallery-preview");
 const galleryPreviewBackdropEl = app.querySelector("#gallery-preview-backdrop");
 const galleryPreviewCloseEl = app.querySelector("#gallery-preview-close");
 const galleryPreviewImageEl = app.querySelector("#gallery-preview-image");
+const galleryPreviewStatusEl = app.querySelector("#gallery-preview-status");
 const galleryPreviewCaptionEl = app.querySelector("#gallery-preview-caption");
 const galleryLikeBtnEl = app.querySelector("#gallery-like-btn");
 const galleryLikeIconEl = app.querySelector(".gallery-like-icon");
@@ -1345,6 +1347,7 @@ let currentGalleryPreviewSrc = "";
 let currentGalleryPreviewAssetKey = "";
 let currentGalleryLikeCount = 0;
 let currentGalleryLikedByViewer = false;
+let currentGalleryPreviewPendingApproval = false;
 
 function syncGalleryLikeUi() {
   if (!(galleryLikeBtnEl instanceof HTMLButtonElement) || !(galleryLikeCountEl instanceof HTMLElement)) {
@@ -1359,7 +1362,7 @@ function syncGalleryLikeUi() {
   }
 }
 
-function openGalleryPreview(imageSrc, showAlexCaption = false, assetKey = "", likeCount = 0, likedByViewer = false) {
+function openGalleryPreview(imageSrc, showAlexCaption = false, assetKey = "", likeCount = 0, likedByViewer = false, previewMeta = null) {
   if (!(galleryPreviewEl instanceof HTMLElement) || !(galleryPreviewImageEl instanceof HTMLImageElement) || !(galleryPreviewCaptionEl instanceof HTMLElement)) {
     return;
   }
@@ -1372,12 +1375,23 @@ function openGalleryPreview(imageSrc, showAlexCaption = false, assetKey = "", li
   currentGalleryPreviewAssetKey = assetKey;
   currentGalleryLikeCount = Number.isFinite(likeCount) ? Math.max(0, Math.floor(likeCount)) : 0;
   currentGalleryLikedByViewer = Boolean(likedByViewer);
+  currentGalleryPreviewPendingApproval = Boolean(previewMeta && previewMeta.pendingApproval);
+  galleryPreviewEl.classList.toggle("is-pending-approval", currentGalleryPreviewPendingApproval);
+  if (galleryPreviewStatusEl instanceof HTMLElement) {
+    const pendingLabel = previewMeta && typeof previewMeta.pendingLabel === "string" && previewMeta.pendingLabel.trim()
+      ? previewMeta.pendingLabel.trim()
+      : "immagine in fase di approvazione";
+    galleryPreviewStatusEl.textContent = pendingLabel;
+    galleryPreviewStatusEl.hidden = !currentGalleryPreviewPendingApproval;
+  }
   if (galleryLikeBtnEl instanceof HTMLButtonElement) {
-    galleryLikeBtnEl.disabled = false;
+    galleryLikeBtnEl.disabled = currentGalleryPreviewPendingApproval;
   }
   syncGalleryLikeUi();
-  galleryPreviewCaptionEl.hidden = !showAlexCaption;
-  galleryPreviewCaptionEl.innerHTML = showAlexCaption ? "<b><a href=\"https://www.instagram.com/alex.timoncini/\" target=\"_blank\" rel=\"noopener noreferrer\">@alex.timoncini</a><br><br>22 y.o. Brisighella<br><br>Full-Stack Web Developer</b><br><br><a href=\"tel:+39393456200\">+39 393 456 200</a><br><a href=\"mailto:timoncinidev@gmail.com\">timoncinidev@gmail.com</a>" : "";
+  galleryPreviewCaptionEl.hidden = currentGalleryPreviewPendingApproval || !showAlexCaption;
+  galleryPreviewCaptionEl.innerHTML = (!currentGalleryPreviewPendingApproval && showAlexCaption)
+    ? "<b><a href=\"https://www.instagram.com/alex.timoncini/\" target=\"_blank\" rel=\"noopener noreferrer\">@alex.timoncini</a><br><br>22 y.o. Brisighella<br><br>Full-Stack Web Developer</b><br><br><a href=\"tel:+39393456200\">+39 393 456 200</a><br><a href=\"mailto:timoncinidev@gmail.com\">timoncinidev@gmail.com</a>"
+    : "";
   galleryPreviewEl.hidden = false;
   galleryPreviewEl.classList.remove("is-closing");
   window.requestAnimationFrame(() => {
@@ -1406,8 +1420,14 @@ function closeGalleryPreview() {
     currentGalleryPreviewAssetKey = "";
     currentGalleryLikeCount = 0;
     currentGalleryLikedByViewer = false;
+    currentGalleryPreviewPendingApproval = false;
+    galleryPreviewEl.classList.remove("is-pending-approval");
     if (galleryLikeBtnEl instanceof HTMLButtonElement) {
       galleryLikeBtnEl.disabled = false;
+    }
+    if (galleryPreviewStatusEl instanceof HTMLElement) {
+      galleryPreviewStatusEl.hidden = true;
+      galleryPreviewStatusEl.textContent = "immagine in fase di approvazione";
     }
     galleryPreviewCaptionEl.hidden = true;
     galleryPreviewCaptionEl.textContent = "";
@@ -1423,7 +1443,7 @@ if (galleryPreviewCloseEl instanceof HTMLButtonElement) {
 }
 if (galleryLikeBtnEl instanceof HTMLButtonElement) {
   galleryLikeBtnEl.addEventListener("click", async () => {
-    if (!currentGalleryPreviewSrc) {
+    if (!currentGalleryPreviewSrc || currentGalleryPreviewPendingApproval) {
       return;
     }
     playGalleryHeartSound();
@@ -3470,7 +3490,7 @@ function renderControls(controlType) {
       const tileHeight = tileWidth * (14 / 9);
       const rows = Math.max(1, Math.floor((gridHeight + gap) / (tileHeight + gap)));
       const nextCount = rows * cols;
-      const renderSignature = `${nextCount}:${galleryTilesData.map((item) => `${item.src}|${item.likeCount}|${item.likedByViewer ? 1 : 0}`).join("#")}`;
+      const renderSignature = `${nextCount}:${galleryTilesData.map((item) => `${item.src}|${item.likeCount}|${item.likedByViewer ? 1 : 0}|${item.pendingApproval ? 1 : 0}`).join("#")}`;
       if (galleryTilesGridEl.dataset.renderSignature === renderSignature) {
         return;
       }
@@ -3503,6 +3523,10 @@ function renderControls(controlType) {
         tileButton.dataset.galleryAssetKey = tileData.assetKey || "";
         tileButton.dataset.galleryLikeCount = String(Number.isFinite(tileData.likeCount) ? tileData.likeCount : 0);
         tileButton.dataset.galleryLiked = tileData.likedByViewer ? "1" : "0";
+        if (tileData.pendingApproval) {
+          tileButton.dataset.galleryPending = "1";
+          tileButton.classList.add("helmet-tile--pending");
+        }
         if (tileData.isAlex) {
           tileButton.dataset.galleryAlex = "1";
         }
@@ -3560,11 +3584,22 @@ function renderControls(controlType) {
         const likeCount = Number.parseInt(tileButton.dataset.galleryLikeCount || "0", 10) || 0;
         const likedByViewer = tileButton.dataset.galleryLiked === "1";
         const assetKey = tileButton.dataset.galleryAssetKey || "";
-        openGalleryPreview(src, tileButton.dataset.galleryAlex === "1", assetKey, likeCount, likedByViewer);
+        const pendingApproval = tileButton.dataset.galleryPending === "1";
+        openGalleryPreview(
+          src,
+          tileButton.dataset.galleryAlex === "1",
+          assetKey,
+          likeCount,
+          likedByViewer,
+          pendingApproval
+            ? { pendingApproval: true, pendingLabel: "immagine in fase di approvazione" }
+            : null
+        );
       });
     }
     void fetchApprovedGalleryImages().then((approvedItems) => {
-      galleryTilesData = approvedItems;
+      const pendingItems = galleryTilesData.filter((item) => item && item.pendingApproval);
+      galleryTilesData = [...pendingItems, ...approvedItems];
       syncGalleryTiles();
     });
 
@@ -3844,14 +3879,39 @@ function renderControls(controlType) {
           showUploadToast("Impossibile registrare il dispositivo. Riprova.", "error");
           return;
         }
-        await submitHelmetContribution({
+        const submissionPayload = await submitHelmetContribution({
           deviceCode,
           imageFile: file
         });
+        const submittedImageUrl = (submissionPayload && typeof submissionPayload === "object")
+          ? (
+            (typeof submissionPayload.imageUrl === "string" && submissionPayload.imageUrl)
+              ? submissionPayload.imageUrl
+              : (typeof submissionPayload.imagePath === "string" && submissionPayload.imagePath
+                ? buildContributionImageUrl(submissionPayload.imagePath)
+                : "")
+          )
+          : "";
+        const pendingSrc = submittedImageUrl || imagePreviewEl.src || "";
+        if (pendingSrc) {
+          const alexTile = galleryTilesData.find((item) => item && item.isAlex) || null;
+          const nonAlexTiles = galleryTilesData.filter((item) => item && !item.isAlex);
+          const pendingTile = {
+            src: pendingSrc,
+            assetKey: `pending-${Date.now()}`,
+            likeCount: 0,
+            likedByViewer: false,
+            pendingApproval: true
+          };
+          galleryTilesData = alexTile ? [alexTile, pendingTile, ...nonAlexTiles] : [pendingTile, ...nonAlexTiles];
+          syncGalleryTiles();
+        }
         applyLockedState({
           image: {
-            imagePath: "",
-            previewUrl: imagePreviewEl.src || ""
+            imagePath: (submissionPayload && typeof submissionPayload.imagePath === "string")
+              ? submissionPayload.imagePath
+              : "",
+            previewUrl: pendingSrc
           }
         });
         animateSubmittedCorners(uploadBoxEl);
