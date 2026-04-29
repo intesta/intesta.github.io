@@ -2006,6 +2006,20 @@ function detectEntrySource() {
     return "instagram";
   }
 
+  const userAgent = String(navigator.userAgent || "");
+  if (/instagram/i.test(userAgent)) {
+    return "instagram";
+  }
+
+  const hasInstagramTrackingParam =
+    params.has("igshid") ||
+    params.has("igsh") ||
+    params.has("ig_rid") ||
+    params.has("ig_mid");
+  if (hasInstagramTrackingParam) {
+    return "instagram";
+  }
+
   return "normal";
 }
 
