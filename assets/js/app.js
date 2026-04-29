@@ -2001,6 +2001,10 @@ function detectEntrySource() {
   if (utmSource.includes("instagram")) {
     return "instagram";
   }
+  const utmMedium = String(params.get("utm_medium") || "").trim().toLowerCase();
+  if (utmSource === "ig" || (utmMedium.includes("social") && utmSource.includes("insta"))) {
+    return "instagram";
+  }
 
   if (/instagram\.com/i.test(String(document.referrer || ""))) {
     return "instagram";
@@ -2018,6 +2022,18 @@ function detectEntrySource() {
     params.has("ig_mid");
   if (hasInstagramTrackingParam) {
     return "instagram";
+  }
+
+  const nestedUrlParam = String(params.get("u") || "").trim();
+  if (nestedUrlParam) {
+    try {
+      const decodedNested = decodeURIComponent(nestedUrlParam);
+      if (/instagram\.com/i.test(decodedNested) || /(?:\?|&)igsh(?:id)?=/i.test(decodedNested)) {
+        return "instagram";
+      }
+    } catch (_error) {
+      // ignore malformed nested url
+    }
   }
 
   return "normal";
