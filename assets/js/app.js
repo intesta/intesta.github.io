@@ -2048,15 +2048,15 @@ async function registerDeviceOnServer(deviceCode = "", entrySource = "normal") {
 
 async function ensureDeviceCode() {
   const localCode = getStoredDeviceCode();
-  const registeredCode = await registerDeviceOnServer(localCode, detectEntrySource());
+  if (localCode) {
+    persistedDeviceCode = localCode;
+    return localCode;
+  }
+  const registeredCode = await registerDeviceOnServer("", detectEntrySource());
   if (registeredCode && registeredCode.length >= 8) {
     window.localStorage.setItem(DEVICE_CODE_STORAGE_KEY, registeredCode);
     persistedDeviceCode = registeredCode;
     return registeredCode;
-  }
-  if (localCode) {
-    persistedDeviceCode = localCode;
-    return localCode;
   }
   return "";
 }
