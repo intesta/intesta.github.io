@@ -437,6 +437,11 @@ if (window.location.hash === "#/admin") {
     authenticated: false,
     loading: true,
     pendingCount: 0,
+    entryCounters: {
+      instagram: 0,
+      qrcode: 0,
+      other: 0
+    },
     groups: [],
     selectedDeviceId: null,
     requestPending: false,
@@ -582,6 +587,23 @@ if (window.location.hash === "#/admin") {
     return false;
   }
 
+  async function refreshEntryCounters() {
+    const { response, payload } = await adminRequest("/entry-counters");
+    if (response.ok && payload?.result === 1 && payload?.counters && typeof payload.counters === "object") {
+      adminState.entryCounters = {
+        instagram: Number(payload.counters.instagram || 0),
+        qrcode: Number(payload.counters.qrcode || 0),
+        other: Number(payload.counters.other || 0)
+      };
+      return true;
+    }
+    if (response.status === 401) {
+      adminState.authenticated = false;
+      adminState.authToken = storeAdminAuthToken("");
+    }
+    return false;
+  }
+
   async function refreshGroups() {
     const { response, payload } = await adminRequest("/device-groups");
     if (response.ok && payload?.result === 1) {
@@ -602,8 +624,12 @@ if (window.location.hash === "#/admin") {
   }
 
   async function loadAdminData() {
-    const [pendingOk, groupsOk] = await Promise.all([refreshPendingCount(), refreshGroups()]);
-    return Boolean(pendingOk && groupsOk);
+    const [pendingOk, countersOk, groupsOk] = await Promise.all([
+      refreshPendingCount(),
+      refreshEntryCounters(),
+      refreshGroups()
+    ]);
+    return Boolean(pendingOk && countersOk && groupsOk);
   }
 
   function statusLabel(status) {
@@ -804,6 +830,20 @@ if (window.location.hash === "#/admin") {
               Da approvare
               <span class="admin-count-dot">${adminState.pendingCount}</span>
             </p>
+            <div class="admin-entry-counters" aria-label="Contatori provenienza ingressi">
+              <p class="admin-pending">
+                Instagram
+                <span class="admin-count-dot">${Math.max(0, Number(adminState.entryCounters.instagram || 0))}</span>
+              </p>
+              <p class="admin-pending">
+                QR code
+                <span class="admin-count-dot">${Math.max(0, Number(adminState.entryCounters.qrcode || 0))}</span>
+              </p>
+              <p class="admin-pending">
+                Altro
+                <span class="admin-count-dot">${Math.max(0, Number(adminState.entryCounters.other || 0))}</span>
+              </p>
+            </div>
             <button class="admin-btn admin-btn--danger" type="button" data-admin-delete-unapproved>Elimina invii non approvati</button>
           </div>
         </header>
@@ -864,6 +904,7 @@ if (window.location.hash === "#/admin") {
         }
         adminState.authenticated = false;
         adminState.authToken = storeAdminAuthToken("");
+        adminState.entryCounters = { instagram: 0, qrcode: 0, other: 0 };
         adminState.groups = [];
         adminState.selectedDeviceId = null;
         adminState.error = "";
@@ -1653,6 +1694,7 @@ const HELMET_UPLOAD_MAX_BYTES = 15 * 1024 * 1024;
 const HELMET_UPLOAD_ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const HELMET_UPLOAD_ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
 const DEVICE_CODE_STORAGE_KEY = "intesta_device_code_v1";
+const ENTRY_SOURCE_QUERY_PARAM = "entrySource";
 const HELMET_UPLOAD_ENDPOINTS = [
   "https://foxly.it/intesta_api/helmet-submissions",
   "https://foxly.it/intesta_api/public/helmet-submissions",
@@ -1938,7 +1980,37 @@ function getStoredDeviceCode() {
   return value.length >= 8 ? value : "";
 }
 
-async function registerDeviceOnServer(deviceCode = "") {
+function normalizeEntrySource(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "qr" || normalized === "instagram" || normalized === "normal") {
+    return normalized;
+  }
+  return "normal";
+}
+
+function detectEntrySource() {
+  const params = new URLSearchParams(window.location.search || "");
+  const explicitSource = normalizeEntrySource(
+    params.get(ENTRY_SOURCE_QUERY_PARAM) || params.get("source") || ""
+  );
+  if (explicitSource !== "normal") {
+    return explicitSource;
+  }
+
+  const utmSource = String(params.get("utm_source") || "").trim().toLowerCase();
+  if (utmSource.includes("instagram")) {
+    return "instagram";
+  }
+
+  if (/instagram\.com/i.test(String(document.referrer || ""))) {
+    return "instagram";
+  }
+
+  return "normal";
+}
+
+async function registerDeviceOnServer(deviceCode = "", entrySource = "normal") {
+  const normalizedEntrySource = normalizeEntrySource(entrySource);
   const endpoints = getDeviceRegisterEndpoints();
   for (const endpoint of endpoints) {
     try {
@@ -1947,7 +2019,10 @@ async function registerDeviceOnServer(deviceCode = "") {
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify(deviceCode ? { deviceCode } : {})
+        body: JSON.stringify({
+          ...(deviceCode ? { deviceCode } : {}),
+          entrySource: normalizedEntrySource
+        })
       });
       let payload = null;
       try {
@@ -1973,7 +2048,7 @@ async function registerDeviceOnServer(deviceCode = "") {
 
 async function ensureDeviceCode() {
   const localCode = getStoredDeviceCode();
-  const registeredCode = await registerDeviceOnServer(localCode);
+  const registeredCode = await registerDeviceOnServer(localCode, detectEntrySource());
   if (registeredCode && registeredCode.length >= 8) {
     window.localStorage.setItem(DEVICE_CODE_STORAGE_KEY, registeredCode);
     persistedDeviceCode = registeredCode;

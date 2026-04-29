@@ -2603,6 +2603,13 @@ body.admin-mode .legal-dock {
   gap: 7px;
 }
 
+.admin-entry-counters {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 14px;
+}
+
 .admin-hero-ui {
   margin-top: 6px;
   display: inline-flex;
