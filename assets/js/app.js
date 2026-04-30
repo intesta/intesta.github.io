@@ -651,6 +651,17 @@ if (window.location.hash === "#/admin") {
       const statusClass = `admin-status admin-status--${escapeHtml(status)}`;
       const hasText = Boolean(group.text);
       const hasImage = Boolean(group.image);
+      const groupContactEmail = String(
+        (group.text && group.text.contactEmail)
+        || (group.image && group.image.contactEmail)
+        || ""
+      ).trim();
+      const groupContactPhone = String(
+        (group.text && group.text.contactPhone)
+        || (group.image && group.image.contactPhone)
+        || ""
+      ).trim();
+      const hasContact = Boolean(groupContactEmail || groupContactPhone);
       return `
         <button class="admin-list-card admin-list-card--button" type="button" data-admin-open-device="${Number(group.deviceId)}">
           <div class="admin-list-head">
@@ -660,6 +671,7 @@ if (window.location.hash === "#/admin") {
           <p class="admin-list-meta">
             ${hasText ? "Descrizione presente" : "Descrizione assente"} •
             ${hasImage ? "Foto presente" : "Foto assente"} •
+            ${hasContact ? "Contatto presente" : "Contatto assente"} •
             ${escapeHtml(formatDateTime(group.createdAt))}
           </p>
         </button>
@@ -679,6 +691,17 @@ if (window.location.hash === "#/admin") {
     if (!group) {
       return "";
     }
+    const groupContactEmail = String(
+      (group.text && group.text.contactEmail)
+      || (group.image && group.image.contactEmail)
+      || ""
+    ).trim();
+    const groupContactPhone = String(
+      (group.text && group.text.contactPhone)
+      || (group.image && group.image.contactPhone)
+      || ""
+    ).trim();
+    const hasContact = Boolean(groupContactEmail || groupContactPhone);
     const textHtml = group.text
       ? `<article class="admin-item-block">
           <p class="admin-item-type">Descrizione</p>
@@ -713,6 +736,12 @@ if (window.location.hash === "#/admin") {
           </div>
         `
       : "";
+    const contactHtml = hasContact
+      ? `<article class="admin-item-block">
+          <p class="admin-item-type">Contatto associato</p>
+          <p class="admin-item-text">${groupContactEmail ? `Email: ${escapeHtml(groupContactEmail)}` : ""}${groupContactEmail && groupContactPhone ? "<br />" : ""}${groupContactPhone ? `Telefono: ${escapeHtml(groupContactPhone)}` : ""}</p>
+        </article>`
+      : `<article class="admin-item-block"><p class="admin-item-text">Nessun contatto associato.</p></article>`;
 
     return `
       <section class="admin-modal" id="admin-modal" aria-modal="true" role="dialog" aria-label="Dettaglio invio">
@@ -722,6 +751,7 @@ if (window.location.hash === "#/admin") {
           <h2 class="admin-modal-title">Dettaglio invio</h2>
           <p class="admin-list-meta">Stato attuale: <span class="admin-status admin-status--${escapeHtml(group.status || "pending")}">${escapeHtml(statusLabel(String(group.status || "pending")))}</span></p>
           ${imageToneControls}
+          ${contactHtml}
           ${textHtml}
           ${imageHtml}
           <form class="admin-image-upload-form" id="admin-image-upload-form">
@@ -1332,6 +1362,18 @@ document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") {
     return;
   }
+  const openHelpPopup = document.querySelector(".targets-help-popup.is-open");
+  if (openHelpPopup instanceof HTMLElement) {
+    e.preventDefault();
+    openHelpPopup.classList.remove("is-open");
+    openHelpPopup.setAttribute("aria-hidden", "true");
+    app.classList.remove("is-help-popup-open");
+    const returnBtn = document.getElementById("targets-help-btn");
+    if (returnBtn instanceof HTMLElement) {
+      returnBtn.focus();
+    }
+    return;
+  }
   if (galleryPreviewEl instanceof HTMLElement && !galleryPreviewEl.hidden) {
     e.preventDefault();
     closeGalleryPreview();
@@ -1715,6 +1757,7 @@ const DEVICE_DELETE_SUBMISSION_ENDPOINTS = [
   "https://foxly.it/intesta_api/public/devices/delete-submission",
   "./intesta_api/devices/delete-submission"
 ];
+const DEVICE_CONTACT_STORAGE_KEY = "intesta_device_contact_v1";
 const GALLERY_APPROVED_IMAGE_ENDPOINTS = [
   "https://foxly.it/intesta_api/gallery/approved-images",
   "https://foxly.it/intesta_api/public/gallery/approved-images",
@@ -1978,6 +2021,39 @@ function getGalleryLikeEndpoints() {
 function getStoredDeviceCode() {
   const value = window.localStorage.getItem(DEVICE_CODE_STORAGE_KEY) || "";
   return value.length >= 8 ? value : "";
+}
+
+function getStoredDeviceContact() {
+  try {
+    const raw = window.localStorage.getItem(DEVICE_CONTACT_STORAGE_KEY) || "";
+    if (!raw) {
+      return { email: "", phone: "" };
+    }
+    const parsed = JSON.parse(raw);
+    const email = parsed && typeof parsed.email === "string" ? parsed.email.trim() : "";
+    const phone = parsed && typeof parsed.phone === "string" ? parsed.phone.trim() : "";
+    return { email, phone };
+  } catch (_error) {
+    return { email: "", phone: "" };
+  }
+}
+
+function setStoredDeviceContact(contact) {
+  const email = contact && typeof contact.email === "string" ? contact.email.trim() : "";
+  const phone = contact && typeof contact.phone === "string" ? contact.phone.trim() : "";
+  if (!email && !phone) {
+    try {
+      window.localStorage.removeItem(DEVICE_CONTACT_STORAGE_KEY);
+    } catch (_error) {
+      // ignore storage failure
+    }
+    return;
+  }
+  try {
+    window.localStorage.setItem(DEVICE_CONTACT_STORAGE_KEY, JSON.stringify({ email, phone }));
+  } catch (_error) {
+    // ignore storage failure
+  }
 }
 
 function normalizeEntrySource(value) {
@@ -2357,7 +2433,7 @@ function validateHelmetUploadFile(file) {
 }
 
 async function submitHelmetContribution(payload) {
-  const { deviceCode, description, imageFile } = payload;
+  const { deviceCode, description, imageFile, contactEmail = "", contactPhone = "" } = payload;
   const formData = new FormData();
   formData.append("deviceCode", deviceCode);
   if (description) {
@@ -2365,6 +2441,12 @@ async function submitHelmetContribution(payload) {
   }
   if (imageFile) {
     formData.append("image", imageFile, imageFile.name);
+  }
+  if (contactEmail) {
+    formData.append("contactEmail", contactEmail);
+  }
+  if (contactPhone) {
+    formData.append("contactPhone", contactPhone);
   }
 
   const endpoints = getHelmetUploadEndpoints();
@@ -3276,6 +3358,35 @@ function renderControls(controlType) {
     const targets = document.createElement("div");
     targets.className = "target-grid";
     targets.innerHTML = `
+      <button class="targets-help-btn" id="targets-help-btn" type="button" aria-label="Apri popup contatto progetto">
+        <img class="targets-help-btn-icon" src="./assets/images/help-circle.svg" alt="" aria-hidden="true" />
+      </button>
+      <section class="targets-help-popup" id="targets-help-popup" role="dialog" aria-modal="true" aria-labelledby="targets-help-title" aria-hidden="true">
+        <div class="targets-help-popup-backdrop" id="targets-help-popup-backdrop"></div>
+        <div class="targets-help-popup-panel">
+          <p class="targets-help-popup-copy" id="targets-help-title">Se sei curioso e vuoi essere contattato o vuoi rimanere aggiornato riguardo al progetto.</p>
+          <div class="targets-help-fields-row">
+            <div class="targets-help-fields-stack">
+              <label class="targets-help-field" for="targets-help-email">
+                <span class="targets-help-field-label">Email</span>
+                <input class="targets-help-field-input" id="targets-help-email" type="email" inputmode="email" autocomplete="email" />
+              </label>
+              <label class="targets-help-field targets-help-field--phone" for="targets-help-phone">
+                <span class="targets-help-field-label">Telefono</span>
+                <span class="targets-help-phone-prefix" aria-hidden="true">+39</span>
+                <input class="targets-help-field-input" id="targets-help-phone" type="tel" inputmode="tel" autocomplete="tel-national" />
+              </label>
+            </div>
+            <button class="targets-help-submit" id="targets-help-submit" type="button" aria-label="Invia contatto">
+              <img class="targets-help-submit-icon" src="./assets/images/send-light.svg" alt="" aria-hidden="true" />
+            </button>
+          </div>
+          <label class="helmet-send-popup-consent targets-help-consent" for="targets-help-consent">
+            <input type="checkbox" class="helmet-send-popup-consent-input" id="targets-help-consent" />
+            <span class="helmet-send-popup-consent-copy">accetto e dichiaro di aver letto l'<a class="helmet-send-popup-privacy-link targets-help-privacy-link" href="#" data-legal-page="PR">informativa sulla privacy</a></span>
+          </label>
+        </div>
+      </section>
       <div class="targets-layout">
         <section class="targets-screen targets-screen--intro">
           <img class="targets-logo" src="./assets/images/logo.png" alt="Logo Intesta" />
@@ -3480,6 +3591,14 @@ function renderControls(controlType) {
     const targetsJumpButton = targets.querySelector("#targets-jump-btn");
     const targetsLower = targets.querySelector("#targets-lower");
     const targetsUpload = targets.querySelector("#targets-upload");
+    const targetsHelpBtn = targets.querySelector("#targets-help-btn");
+    const targetsHelpPopupEl = targets.querySelector("#targets-help-popup");
+    const targetsHelpBackdropEl = targets.querySelector("#targets-help-popup-backdrop");
+    const targetsHelpSubmitEl = targets.querySelector("#targets-help-submit");
+    const targetsHelpEmailEl = targets.querySelector("#targets-help-email");
+    const targetsHelpPhoneEl = targets.querySelector("#targets-help-phone");
+    const targetsHelpConsentEl = targets.querySelector("#targets-help-consent");
+    const targetsHelpPrivacyLinkEl = targets.querySelector(".targets-help-privacy-link");
     const activateTargetsArea = () => {
       if (!hasTargetsScrolledDown) {
         hasTargetsScrolledDown = true;
@@ -3728,6 +3847,116 @@ function renderControls(controlType) {
       });
     };
 
+    const openTargetsHelpPopup = () => {
+      if (!(targetsHelpPopupEl instanceof HTMLElement)) {
+        return;
+      }
+      if (targetsHelpConsentEl instanceof HTMLInputElement) {
+        targetsHelpConsentEl.checked = false;
+      }
+      playHelmetActionSound();
+      app.classList.add("is-help-popup-open");
+      targetsHelpPopupEl.setAttribute("aria-hidden", "false");
+      targetsHelpPopupEl.classList.add("is-open");
+      if (targetsHelpEmailEl instanceof HTMLInputElement) {
+        window.setTimeout(() => {
+          targetsHelpEmailEl.focus();
+        }, 10);
+      }
+    };
+
+    const closeTargetsHelpPopup = (returnFocusEl = null) => {
+      if (!(targetsHelpPopupEl instanceof HTMLElement)) {
+        return;
+      }
+      targetsHelpPopupEl.classList.remove("is-open");
+      targetsHelpPopupEl.setAttribute("aria-hidden", "true");
+      app.classList.remove("is-help-popup-open");
+      if (targetsHelpConsentEl instanceof HTMLInputElement) {
+        targetsHelpConsentEl.checked = false;
+      }
+      if (returnFocusEl instanceof HTMLElement) {
+        returnFocusEl.focus();
+      }
+    };
+
+    if (targetsHelpBtn instanceof HTMLButtonElement) {
+      targetsHelpBtn.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        openTargetsHelpPopup();
+      });
+    }
+
+    if (targetsHelpBackdropEl instanceof HTMLElement) {
+      targetsHelpBackdropEl.addEventListener("click", () => {
+        closeTargetsHelpPopup(targetsHelpBtn);
+      });
+    }
+
+    if (targetsHelpPrivacyLinkEl instanceof HTMLAnchorElement) {
+      targetsHelpPrivacyLinkEl.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        openLegalPopup("PR");
+      });
+    }
+
+    if (targetsHelpSubmitEl instanceof HTMLButtonElement) {
+      targetsHelpSubmitEl.addEventListener("click", async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const emailValue = targetsHelpEmailEl instanceof HTMLInputElement
+          ? targetsHelpEmailEl.value.trim()
+          : "";
+        const phoneValue = targetsHelpPhoneEl instanceof HTMLInputElement
+          ? targetsHelpPhoneEl.value.trim()
+          : "";
+        const hasEmail = emailValue.length > 0;
+        const hasPhone = phoneValue.length > 0;
+        const phoneValueWithPrefix = hasPhone
+          ? (phoneValue.startsWith("+39") ? phoneValue : `+39 ${phoneValue}`)
+          : "";
+        if (!hasEmail && !hasPhone) {
+          showUploadToast("Inserisci email o telefono.", "error");
+          return;
+        }
+        if (hasEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(emailValue)) {
+          showUploadToast("Email non valida.", "error");
+          return;
+        }
+        if (hasPhone && !/^[0-9+\s().-]{6,32}$/.test(phoneValue)) {
+          showUploadToast("Telefono non valido.", "error");
+          return;
+        }
+        if (!(targetsHelpConsentEl instanceof HTMLInputElement) || !targetsHelpConsentEl.checked) {
+          showUploadToast("Devi accettare la privacy prima di inviare.", "error");
+          return;
+        }
+
+        targetsHelpSubmitEl.disabled = true;
+        try {
+          setStoredDeviceContact({
+            email: emailValue,
+            phone: phoneValueWithPrefix
+          });
+          if (targetsHelpEmailEl instanceof HTMLInputElement) {
+            targetsHelpEmailEl.value = "";
+          }
+          if (targetsHelpPhoneEl instanceof HTMLInputElement) {
+            targetsHelpPhoneEl.value = "";
+          }
+          showUploadToast("Contatto inviato correttamente.", "success");
+          closeTargetsHelpPopup(targetsHelpBtn);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Invio non riuscito.";
+          showUploadToast(message, "error");
+        } finally {
+          targetsHelpSubmitEl.disabled = false;
+        }
+      });
+    }
+
     const closeHelmetSendPopup = (popupEl, returnFocusEl) => {
       if (!(popupEl instanceof HTMLElement)) {
         return;
@@ -3886,9 +4115,12 @@ function renderControls(controlType) {
           showUploadToast("Impossibile registrare il dispositivo. Riprova.", "error");
           return;
         }
+        const storedContact = getStoredDeviceContact();
         await submitHelmetContribution({
           deviceCode,
-          description
+          description,
+          contactEmail: storedContact.email,
+          contactPhone: storedContact.phone
         });
         applyLockedState({
           text: {
@@ -3984,9 +4216,12 @@ function renderControls(controlType) {
           showUploadToast("Impossibile registrare il dispositivo. Riprova.", "error");
           return;
         }
+        const storedContact = getStoredDeviceContact();
         const submissionPayload = await submitHelmetContribution({
           deviceCode,
-          imageFile: file
+          imageFile: file,
+          contactEmail: storedContact.email,
+          contactPhone: storedContact.phone
         });
         const submittedImageUrl = (submissionPayload && typeof submissionPayload === "object")
           ? (

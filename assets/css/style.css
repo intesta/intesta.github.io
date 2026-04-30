@@ -685,6 +685,158 @@ b{
   animation: chevron-bounce-y 1.25s ease-in-out infinite;
 }
 
+.targets-help-btn {
+  position: fixed;
+  top: clamp(20px, 4.8vw, 36px);
+  left: calc(var(--site-side) + clamp(12px, 3.8vw, 22px));
+  z-index: 83;
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  transition: transform 170ms var(--motion-ease), opacity 170ms var(--motion-ease);
+}
+
+.targets-help-btn:hover {
+  transform: translateY(-1px) scale(1.02);
+}
+
+.targets-help-btn-icon {
+  width: 52px;
+  height: 52px;
+  display: block;
+}
+
+.targets-help-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 210;
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms var(--motion-ease);
+}
+
+.targets-help-popup.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.targets-help-popup-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(248, 248, 248, 0.54);
+  backdrop-filter: blur(4px);
+}
+
+.targets-help-popup-panel {
+  position: relative;
+  z-index: 1;
+  width: min(92vw, 470px);
+  padding: 28px 24px 22px;
+  display: grid;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: rgba(0, 0, 0, 0.25) 0px 8px 24px;
+}
+
+.targets-help-popup-copy {
+  margin: 0;
+  padding-right: 22px;
+  margin-bottom: 16px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  color: #0f1318;
+}
+
+.targets-help-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.targets-help-fields-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.targets-help-fields-stack {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.targets-help-field-label {
+  min-width: 84px;
+  font-size: 0.95rem;
+  line-height: 1;
+  color: #0f1318;
+}
+
+.targets-help-phone-prefix {
+  font-size: 0.95rem;
+  line-height: 1;
+  color: #0f1318;
+}
+
+.targets-help-field-input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  border: none;
+  background: transparent;
+  background-image: radial-gradient(circle, #111317 1.5px, transparent 1.6px);
+  background-size: 11px 3px;
+  background-repeat: repeat-x;
+  background-position: left calc(100% - 1px);
+  padding: 8px 0 10px;
+  font: inherit;
+  font-size: 0.95rem;
+  line-height: 1.1;
+  color: #0f1318;
+}
+
+.targets-help-consent {
+  justify-content: flex-start;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.targets-help-submit {
+  flex: 0 0 auto;
+  align-self: center;
+  width: 44px;
+  height: 44px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  transform: translateY(6px);
+  transition: transform 140ms var(--motion-ease), opacity 140ms var(--motion-ease);
+}
+
+.targets-help-submit:hover {
+  transform: translateY(5px);
+}
+
+.targets-help-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.targets-help-submit-icon {
+  width: 44px;
+  height: 44px;
+  display: block;
+}
+
 .targets-jump-btn.is-hidden {
   opacity: 0;
   pointer-events: none;
