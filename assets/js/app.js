@@ -1757,6 +1757,11 @@ const DEVICE_DELETE_SUBMISSION_ENDPOINTS = [
   "https://foxly.it/intesta_api/public/devices/delete-submission",
   "./intesta_api/devices/delete-submission"
 ];
+const DEVICE_CONTACT_ENDPOINTS = [
+  "https://foxly.it/intesta_api/devices/contact",
+  "https://foxly.it/intesta_api/public/devices/contact",
+  "./intesta_api/devices/contact"
+];
 const DEVICE_CONTACT_STORAGE_KEY = "intesta_device_contact_v1";
 const GALLERY_APPROVED_IMAGE_ENDPOINTS = [
   "https://foxly.it/intesta_api/gallery/approved-images",
@@ -2004,6 +2009,12 @@ function getDeviceDeleteSubmissionEndpoints() {
   const uploadConfig = window.INTESA_UPLOAD || {};
   const customEndpoint = uploadConfig.deviceDeleteEndpoint ? String(uploadConfig.deviceDeleteEndpoint) : "";
   return [customEndpoint, ...DEVICE_DELETE_SUBMISSION_ENDPOINTS].filter((value, index, arr) => value && arr.indexOf(value) === index);
+}
+
+function getDeviceContactEndpoints() {
+  const uploadConfig = window.INTESA_UPLOAD || {};
+  const customEndpoint = uploadConfig.deviceContactEndpoint ? String(uploadConfig.deviceContactEndpoint) : "";
+  return [customEndpoint, ...DEVICE_CONTACT_ENDPOINTS].filter((value, index, arr) => value && arr.indexOf(value) === index);
 }
 
 function getGalleryApprovedImageEndpoints() {
@@ -2487,6 +2498,52 @@ async function submitHelmetContribution(payload) {
     }
   }
 
+  throw lastError;
+}
+
+async function submitDeviceContactAssociation(payload) {
+  const { deviceCode, email = "", phone = "", privacyAccepted = false } = payload || {};
+  const endpoints = getDeviceContactEndpoints();
+  let lastError = new Error("Endpoint contatto non disponibile.");
+  for (const endpoint of endpoints) {
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          deviceCode,
+          email,
+          phone,
+          privacyAccepted
+        })
+      });
+      let responsePayload = null;
+      try {
+        responsePayload = await response.json();
+      } catch (_error) {
+        responsePayload = null;
+      }
+      if (response.ok && responsePayload && responsePayload.result === 1) {
+        return responsePayload;
+      }
+      lastError = new Error(
+        responsePayload && responsePayload.msg
+          ? responsePayload.msg
+          : `Associazione contatto non riuscita (HTTP ${response.status}).`
+      );
+      if (response.status !== 404) {
+        throw lastError;
+      }
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error("Errore di rete.");
+      if (String(endpoint).includes("://")) {
+        continue;
+      }
+      throw lastError;
+    }
+  }
   throw lastError;
 }
 
@@ -3936,9 +3993,20 @@ function renderControls(controlType) {
 
         targetsHelpSubmitEl.disabled = true;
         try {
+          const deviceCode = persistedDeviceCode || (await ensureDeviceCode());
+          if (!deviceCode) {
+            showUploadToast("Impossibile identificare il dispositivo.", "error");
+            return;
+          }
           setStoredDeviceContact({
             email: emailValue,
             phone: phoneValueWithPrefix
+          });
+          await submitDeviceContactAssociation({
+            deviceCode,
+            email: emailValue,
+            phone: phoneValueWithPrefix,
+            privacyAccepted: true
           });
           if (targetsHelpEmailEl instanceof HTMLInputElement) {
             targetsHelpEmailEl.value = "";
