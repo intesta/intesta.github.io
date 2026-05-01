@@ -654,11 +654,13 @@ if (window.location.hash === "#/admin") {
       const groupContactEmail = String(
         (group.text && group.text.contactEmail)
         || (group.image && group.image.contactEmail)
+        || group.contactEmail
         || ""
       ).trim();
       const groupContactPhone = String(
         (group.text && group.text.contactPhone)
         || (group.image && group.image.contactPhone)
+        || group.contactPhone
         || ""
       ).trim();
       const hasContact = Boolean(groupContactEmail || groupContactPhone);
@@ -694,11 +696,13 @@ if (window.location.hash === "#/admin") {
     const groupContactEmail = String(
       (group.text && group.text.contactEmail)
       || (group.image && group.image.contactEmail)
+      || group.contactEmail
       || ""
     ).trim();
     const groupContactPhone = String(
       (group.text && group.text.contactPhone)
       || (group.image && group.image.contactPhone)
+      || group.contactPhone
       || ""
     ).trim();
     const hasContact = Boolean(groupContactEmail || groupContactPhone);
