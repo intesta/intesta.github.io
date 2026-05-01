@@ -1732,6 +1732,7 @@ const legalPopupPages = {
   CK: { href: "./cookie.html", title: "Cookie tecnici" },
   TS: { href: "./termini.html", title: "Termini di utilizzo del servizio" }
 };
+const PRIVACY_POLICY_VERSION = "2026-05-01";
 const HELMET_UPLOAD_MAX_BYTES = 15 * 1024 * 1024;
 const HELMET_UPLOAD_ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const HELMET_UPLOAD_ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
@@ -2444,9 +2445,19 @@ function validateHelmetUploadFile(file) {
 }
 
 async function submitHelmetContribution(payload) {
-  const { deviceCode, description, imageFile, contactEmail = "", contactPhone = "" } = payload;
+  const {
+    deviceCode,
+    description,
+    imageFile,
+    contactEmail = "",
+    contactPhone = "",
+    privacyAccepted = false,
+    privacyPolicyVersion = PRIVACY_POLICY_VERSION
+  } = payload;
   const formData = new FormData();
   formData.append("deviceCode", deviceCode);
+  formData.append("privacyAccepted", privacyAccepted ? "true" : "false");
+  formData.append("privacyPolicyVersion", String(privacyPolicyVersion || PRIVACY_POLICY_VERSION));
   if (description) {
     formData.append("description", description);
   }
@@ -2502,7 +2513,13 @@ async function submitHelmetContribution(payload) {
 }
 
 async function submitDeviceContactAssociation(payload) {
-  const { deviceCode, email = "", phone = "", privacyAccepted = false } = payload || {};
+  const {
+    deviceCode,
+    email = "",
+    phone = "",
+    privacyAccepted = false,
+    privacyPolicyVersion = PRIVACY_POLICY_VERSION
+  } = payload || {};
   const endpoints = getDeviceContactEndpoints();
   let lastError = new Error("Endpoint contatto non disponibile.");
   for (const endpoint of endpoints) {
@@ -2516,7 +2533,8 @@ async function submitDeviceContactAssociation(payload) {
           deviceCode,
           email,
           phone,
-          privacyAccepted
+          privacyAccepted,
+          privacyPolicyVersion
         })
       });
       let responsePayload = null;
@@ -4188,7 +4206,8 @@ function renderControls(controlType) {
           deviceCode,
           description,
           contactEmail: storedContact.email,
-          contactPhone: storedContact.phone
+          contactPhone: storedContact.phone,
+          privacyAccepted: true
         });
         applyLockedState({
           text: {
@@ -4289,7 +4308,8 @@ function renderControls(controlType) {
           deviceCode,
           imageFile: file,
           contactEmail: storedContact.email,
-          contactPhone: storedContact.phone
+          contactPhone: storedContact.phone,
+          privacyAccepted: true
         });
         const submittedImageUrl = (submissionPayload && typeof submissionPayload === "object")
           ? (
