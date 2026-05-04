@@ -4129,13 +4129,29 @@ function renderControls(controlType) {
       });
     };
 
-    const openCertificateDownloadPopup = (returnFocusEl = null) => {
+    const moveCertificatePopupTo = (hostEl) => {
+      if (!(certificatePopupEl instanceof HTMLElement) || !(hostEl instanceof HTMLElement)) {
+        return;
+      }
+      if (certificatePopupEl.parentElement !== hostEl) {
+        hostEl.append(certificatePopupEl);
+      }
+    };
+
+    const openCertificateDownloadPopup = (returnFocusEl = null, popupHostEl = null) => {
       if (!(certificatePopupEl instanceof HTMLElement)) {
         return;
       }
       const returnId = returnFocusEl instanceof HTMLElement && returnFocusEl.id
         ? returnFocusEl.id
         : "helmet-send-image";
+      if (popupHostEl instanceof HTMLElement) {
+        moveCertificatePopupTo(popupHostEl);
+      } else if (returnId === "helmet-send-text" && descriptionBoxEl instanceof HTMLElement) {
+        moveCertificatePopupTo(descriptionBoxEl);
+      } else if (uploadBoxEl instanceof HTMLElement) {
+        moveCertificatePopupTo(uploadBoxEl);
+      }
       certificateReturnFocusId = returnId;
       certificatePopupEl.dataset.returnId = returnId;
       openHelmetSendPopup(certificatePopupEl, certificatePopupConfirmEl);
@@ -4446,7 +4462,7 @@ function renderControls(controlType) {
         if (sendPopupTextEl instanceof HTMLElement) {
           closeHelmetSendPopup(sendPopupTextEl, sendTextEl);
         }
-        openCertificateDownloadPopup(sendTextEl);
+        openCertificateDownloadPopup(sendTextEl, descriptionBoxEl);
       } catch (error) {
         const message = error instanceof Error ? error.message : "Invio non riuscito.";
         showUploadToast(message, "error");
@@ -4575,7 +4591,7 @@ function renderControls(controlType) {
         if (sendPopupImageEl instanceof HTMLElement) {
           closeHelmetSendPopup(sendPopupImageEl, sendImageEl);
         }
-        openCertificateDownloadPopup(sendImageEl);
+        openCertificateDownloadPopup(sendImageEl, uploadBoxEl);
       } catch (error) {
         const message = error instanceof Error ? error.message : "Invio non riuscito.";
         showUploadToast(message, "error");
