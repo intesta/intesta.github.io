@@ -491,6 +491,15 @@ if (window.location.hash === "#/admin") {
     return customBase || ADMIN_API_BASE;
   }
 
+  function getPublicApiBase() {
+    const adminBase = getAdminApiBase().replace(/\/+$/, "");
+    return adminBase.endsWith("/admin") ? adminBase.slice(0, -6) : adminBase;
+  }
+
+  function buildCertificateUrl(deviceCode) {
+    return `${getPublicApiBase()}/devices/certificate?deviceCode=${encodeURIComponent(String(deviceCode || "").trim())}`;
+  }
+
   function getStoredAdminAuthToken() {
     try {
       return String(window.localStorage.getItem(ADMIN_AUTH_TOKEN_STORAGE_KEY) || "").trim();
@@ -708,9 +717,6 @@ if (window.location.hash === "#/admin") {
       || group.deviceCode
       || ""
     ).trim();
-    const certificateHref = groupDeviceCode
-      ? `${getAdminApiBase()}/devices/certificate?deviceCode=${encodeURIComponent(groupDeviceCode)}`
-      : "";
     const groupContactEmail = String(
       (group.text && group.text.contactEmail)
       || (group.image && group.image.contactEmail)
@@ -773,8 +779,8 @@ if (window.location.hash === "#/admin") {
           <h2 class="admin-modal-title">Dettaglio invio</h2>
           <p class="admin-list-meta">Stato attuale: <span class="admin-status admin-status--${escapeHtml(group.status || "pending")}">${escapeHtml(statusLabel(String(group.status || "pending")))}</span></p>
           ${groupDeviceCode
-            ? `<a class="admin-btn admin-btn--primary admin-btn--full" href="${escapeHtml(certificateHref)}" target="_blank" rel="noopener noreferrer">Stampa attestato (Device ${escapeHtml(groupDeviceCode)})</a>`
-            : `<button class="admin-btn admin-btn--primary admin-btn--full" type="button" disabled>Stampa attestato (device code mancante)</button>`
+            ? `<button class="admin-btn admin-btn--primary admin-btn--full" type="button" data-admin-print-certificate="${escapeHtml(groupDeviceCode)}">Stampa</button>`
+            : `<button class="admin-btn admin-btn--primary admin-btn--full" type="button" disabled>Stampa</button>`
           }
           ${imageToneControls}
           ${contactHtml}
@@ -931,6 +937,7 @@ if (window.location.hash === "#/admin") {
     const openButtons = Array.from(document.querySelectorAll("[data-admin-open-device]"));
     const closeModalButtons = Array.from(document.querySelectorAll("[data-admin-close-modal]"));
     const statusButtons = Array.from(document.querySelectorAll("[data-admin-set-status]"));
+    const printCertificateButtons = Array.from(document.querySelectorAll("[data-admin-print-certificate]"));
     const deleteUnapprovedButtons = Array.from(document.querySelectorAll("[data-admin-delete-unapproved]"));
     const imageUploadForm = document.querySelector("#admin-image-upload-form");
     const imageUploadSubmit = document.querySelector("#admin-image-upload-submit");
@@ -1074,6 +1081,20 @@ if (window.location.hash === "#/admin") {
           adminState.requestPending = false;
           renderAdmin();
         }
+      });
+    });
+    printCertificateButtons.forEach((button) => {
+      if (!(button instanceof HTMLButtonElement)) {
+        return;
+      }
+      button.addEventListener("click", () => {
+        const deviceCode = String(button.dataset.adminPrintCertificate || "").trim();
+        if (!deviceCode) {
+          showAdminToast("Device code mancante per stampa attestato.", "error");
+          return;
+        }
+        playHelmetActionSound();
+        window.open(buildCertificateUrl(deviceCode), "_blank", "noopener");
       });
     });
     deleteUnapprovedButtons.forEach((button) => {
