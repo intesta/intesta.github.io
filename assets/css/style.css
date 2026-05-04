@@ -2755,6 +2755,31 @@ body.admin-mode .legal-dock {
   gap: 7px;
 }
 
+.admin-cert-engine {
+  margin: 0;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(20, 27, 38, 0.18);
+  background: rgba(240, 242, 245, 0.92);
+  color: #48515f;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.admin-cert-engine--fpdi {
+  border-color: rgba(45, 155, 76, 0.34);
+  background: rgba(230, 247, 236, 0.98);
+  color: #1f6d37;
+}
+
+.admin-cert-engine--fallback {
+  border-color: rgba(233, 156, 25, 0.35);
+  background: rgba(255, 246, 230, 0.98);
+  color: #8f5700;
+}
+
 .admin-entry-counters {
   display: flex;
   flex-wrap: wrap;

@@ -436,6 +436,7 @@ if (window.location.hash === "#/admin") {
   const adminState = {
     authenticated: false,
     loading: true,
+    certificateEngine: "unknown",
     pendingCount: 0,
     entryCounters: {
       instagram: 0,
@@ -448,6 +449,14 @@ if (window.location.hash === "#/admin") {
     error: "",
     authToken: ""
   };
+
+  function normalizeCertificateEngine(value) {
+    const normalized = String(value || "").trim().toLowerCase();
+    if (normalized === "fpdi" || normalized === "fallback") {
+      return normalized;
+    }
+    return "unknown";
+  }
 
   function escapeHtml(value) {
     const text = value == null ? "" : String(value);
@@ -829,6 +838,7 @@ if (window.location.hash === "#/admin") {
               return;
             }
             adminState.authToken = storeAdminAuthToken(payload?.authToken || "");
+            adminState.certificateEngine = normalizeCertificateEngine(payload?.certificateEngine);
             adminState.authenticated = true;
             adminState.loading = true;
             renderAdmin();
@@ -850,6 +860,18 @@ if (window.location.hash === "#/admin") {
       }
       return;
     }
+
+    const certificateEngine = normalizeCertificateEngine(adminState.certificateEngine);
+    const certificateEngineLabel = certificateEngine === "fpdi"
+      ? "Certificato: FPDI ON"
+      : certificateEngine === "fallback"
+        ? "Certificato: fallback"
+        : "Certificato: stato sconosciuto";
+    const certificateEngineClass = certificateEngine === "fpdi"
+      ? "admin-cert-engine admin-cert-engine--fpdi"
+      : certificateEngine === "fallback"
+        ? "admin-cert-engine admin-cert-engine--fallback"
+        : "admin-cert-engine";
 
     adminRoot.innerHTML = `
       <section class="admin-shell">
@@ -873,6 +895,7 @@ if (window.location.hash === "#/admin") {
           </div>
           <div class="admin-header-center">
             <h1 class="admin-title">Moderazione invii</h1>
+            <p class="${certificateEngineClass}">${escapeHtml(certificateEngineLabel)}</p>
             <p class="admin-pending">
               Da approvare
               <span class="admin-count-dot">${adminState.pendingCount}</span>
@@ -951,6 +974,7 @@ if (window.location.hash === "#/admin") {
         }
         adminState.authenticated = false;
         adminState.authToken = storeAdminAuthToken("");
+        adminState.certificateEngine = "unknown";
         adminState.entryCounters = { instagram: 0, qrcode: 0, other: 0 };
         adminState.groups = [];
         adminState.selectedDeviceId = null;
@@ -1158,6 +1182,7 @@ if (window.location.hash === "#/admin") {
     try {
       const { response, payload } = await adminRequest("/session");
       adminState.authenticated = Boolean(response.ok && payload?.result === 1 && payload?.authenticated === 1);
+      adminState.certificateEngine = normalizeCertificateEngine(payload?.certificateEngine);
       if (response.ok && payload?.result === 1 && payload?.authToken) {
         adminState.authToken = storeAdminAuthToken(payload.authToken);
       }
