@@ -693,6 +693,15 @@ if (window.location.hash === "#/admin") {
     if (!group) {
       return "";
     }
+    const groupDeviceCode = String(
+      (group.text && group.text.deviceCode)
+      || (group.image && group.image.deviceCode)
+      || group.deviceCode
+      || ""
+    ).trim();
+    const certificateHref = groupDeviceCode
+      ? `${getAdminApiBase()}/devices/certificate?deviceCode=${encodeURIComponent(groupDeviceCode)}`
+      : "";
     const groupContactEmail = String(
       (group.text && group.text.contactEmail)
       || (group.image && group.image.contactEmail)
@@ -754,6 +763,10 @@ if (window.location.hash === "#/admin") {
           <button class="admin-modal-close" type="button" data-admin-close-modal aria-label="Chiudi dettaglio">×</button>
           <h2 class="admin-modal-title">Dettaglio invio</h2>
           <p class="admin-list-meta">Stato attuale: <span class="admin-status admin-status--${escapeHtml(group.status || "pending")}">${escapeHtml(statusLabel(String(group.status || "pending")))}</span></p>
+          ${groupDeviceCode
+            ? `<a class="admin-btn admin-btn--primary admin-btn--full" href="${escapeHtml(certificateHref)}" target="_blank" rel="noopener noreferrer">Stampa attestato (Device ${escapeHtml(groupDeviceCode)})</a>`
+            : `<button class="admin-btn admin-btn--primary admin-btn--full" type="button" disabled>Stampa attestato (device code mancante)</button>`
+          }
           ${imageToneControls}
           ${contactHtml}
           ${textHtml}
