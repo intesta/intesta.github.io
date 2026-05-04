@@ -1395,6 +1395,8 @@ document.addEventListener("keydown", (e) => {
     returnId = "helmet-send-text";
   } else if (openPopup.id === "helmet-remove-popup-image") {
     returnId = "helmet-remove-image";
+  } else if (openPopup.id === "helmet-certificate-popup") {
+    returnId = String(openPopup.dataset.returnId || "helmet-send-image");
   }
   const returnBtn = document.getElementById(returnId);
   if (returnBtn instanceof HTMLElement) {
@@ -1805,6 +1807,11 @@ const DEVICE_CONTACT_ENDPOINTS = [
   "https://foxly.it/intesta_api/public/devices/contact",
   "./intesta_api/devices/contact"
 ];
+const DEVICE_CERTIFICATE_ENDPOINTS = [
+  "https://foxly.it/intesta_api/devices/certificate",
+  "https://foxly.it/intesta_api/public/devices/certificate",
+  "./intesta_api/devices/certificate"
+];
 const DEVICE_CONTACT_STORAGE_KEY = "intesta_device_contact_v1";
 const GALLERY_APPROVED_IMAGE_ENDPOINTS = [
   "https://foxly.it/intesta_api/gallery/approved-images",
@@ -2058,6 +2065,12 @@ function getDeviceContactEndpoints() {
   const uploadConfig = window.INTESA_UPLOAD || {};
   const customEndpoint = uploadConfig.deviceContactEndpoint ? String(uploadConfig.deviceContactEndpoint) : "";
   return [customEndpoint, ...DEVICE_CONTACT_ENDPOINTS].filter((value, index, arr) => value && arr.indexOf(value) === index);
+}
+
+function getDeviceCertificateEndpoints() {
+  const uploadConfig = window.INTESA_UPLOAD || {};
+  const customEndpoint = uploadConfig.deviceCertificateEndpoint ? String(uploadConfig.deviceCertificateEndpoint) : "";
+  return [customEndpoint, ...DEVICE_CERTIFICATE_ENDPOINTS].filter((value, index, arr) => value && arr.indexOf(value) === index);
 }
 
 function getGalleryApprovedImageEndpoints() {
@@ -2596,6 +2609,83 @@ async function submitDeviceContactAssociation(payload) {
       if (response.status !== 404) {
         throw lastError;
       }
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error("Errore di rete.");
+      if (String(endpoint).includes("://")) {
+        continue;
+      }
+      throw lastError;
+    }
+  }
+  throw lastError;
+}
+
+function parseFilenameFromContentDisposition(headerValue) {
+  const value = String(headerValue || "");
+  if (!value) {
+    return "";
+  }
+  const utf8Match = value.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match && utf8Match[1]) {
+    try {
+      return decodeURIComponent(utf8Match[1].trim());
+    } catch (_error) {
+      return utf8Match[1].trim();
+    }
+  }
+  const basicMatch = value.match(/filename="?([^"]+)"?/i);
+  return basicMatch && basicMatch[1] ? basicMatch[1].trim() : "";
+}
+
+function triggerBlobDownload(blob, downloadName) {
+  const objectUrl = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = objectUrl;
+  anchor.download = downloadName || "attestato.pdf";
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => {
+    URL.revokeObjectURL(objectUrl);
+  }, 1000);
+}
+
+async function downloadDeviceCertificate(deviceCode) {
+  if (!deviceCode) {
+    throw new Error("Impossibile identificare il dispositivo.");
+  }
+  const endpoints = getDeviceCertificateEndpoints();
+  let lastError = new Error("Endpoint attestato non disponibile.");
+  for (const endpoint of endpoints) {
+    try {
+      const url = `${endpoint}${endpoint.includes("?") ? "&" : "?"}deviceCode=${encodeURIComponent(deviceCode)}`;
+      const response = await fetch(url, {
+        method: "GET"
+      });
+      if (!response.ok) {
+        let message = `Download attestato non riuscito (HTTP ${response.status}).`;
+        const contentType = String(response.headers.get("content-type") || "");
+        if (contentType.includes("application/json")) {
+          try {
+            const payload = await response.json();
+            if (payload && typeof payload.msg === "string" && payload.msg.trim()) {
+              message = payload.msg.trim();
+            }
+          } catch (_error) {
+            // ignore malformed json payload
+          }
+        }
+        lastError = new Error(message);
+        if (response.status !== 404) {
+          throw lastError;
+        }
+        continue;
+      }
+      const blob = await response.blob();
+      const headerName = parseFilenameFromContentDisposition(response.headers.get("content-disposition"));
+      const fileName = headerName || `ATTESTATO PARTECIPAZIONE ${new Date().toLocaleDateString("it-IT").replaceAll("/", "-")}.pdf`;
+      triggerBlobDownload(blob, fileName);
+      return;
     } catch (error) {
       lastError = error instanceof Error ? error : new Error("Errore di rete.");
       if (String(endpoint).includes("://")) {
@@ -3671,6 +3761,30 @@ function renderControls(controlType) {
                   </div>
                 </div>
               </div>
+              <div
+                class="helmet-send-popup"
+                id="helmet-certificate-popup"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="helmet-certificate-popup-title"
+                aria-hidden="true"
+                data-return-id="helmet-send-image"
+              >
+                <div class="helmet-send-popup-panel">
+                  <span class="helmet-send-popup-mark helmet-send-popup-mark--ok" aria-hidden="true">
+                    <img class="helmet-send-popup-check" src="./assets/images/check-circle.svg" alt="" />
+                  </span>
+                  <p class="helmet-send-popup-title" id="helmet-certificate-popup-title">vuoi scaricare l'attestato di certificazione?</p>
+                  <div class="helmet-send-popup-actions">
+                    <button type="button" class="helmet-send-popup-choice helmet-send-popup-choice--cancel" id="helmet-certificate-popup-cancel" aria-label="Non scaricare attestato">
+                      <img class="helmet-send-popup-choice-icon" src="./assets/images/x.svg" alt="" aria-hidden="true" />
+                    </button>
+                    <button type="button" class="helmet-send-popup-choice helmet-send-popup-choice--confirm" id="helmet-certificate-popup-confirm" aria-label="Scarica attestato">
+                      <img class="helmet-send-popup-choice-icon" src="./assets/images/circle.svg" alt="" aria-hidden="true" />
+                    </button>
+                  </div>
+                </div>
+              </div>
             </label>
 
             <div class="targets-divider" data-divider-label="your help" aria-hidden="true">
@@ -3778,6 +3892,9 @@ function renderControls(controlType) {
     const removePopupImageConfirmEl = targets.querySelector("#helmet-remove-popup-image-confirm");
     const removePopupImageCancelEl = targets.querySelector("#helmet-remove-popup-image-cancel");
     const removeImageEl = targets.querySelector("#helmet-remove-image");
+    const certificatePopupEl = targets.querySelector("#helmet-certificate-popup");
+    const certificatePopupConfirmEl = targets.querySelector("#helmet-certificate-popup-confirm");
+    const certificatePopupCancelEl = targets.querySelector("#helmet-certificate-popup-cancel");
     const baseHelmetDownloadEl = targets.querySelector(".target-btn--download");
     const descriptionBoxEl = targets.querySelector(".target-btn--description");
     const uploadBoxEl = targets.querySelector(".target-btn--upload");
@@ -3786,6 +3903,7 @@ function renderControls(controlType) {
       : null;
     const galleryTilesGridEl = targets.querySelector("#helmet-tiles-grid");
     let previewUrl = "";
+    let certificateReturnFocusId = "helmet-send-image";
     let galleryTilesData = [{
       src: "./assets/images/alex.png",
       assetKey: "alex",
@@ -3965,6 +4083,18 @@ function renderControls(controlType) {
       });
     };
 
+    const openCertificateDownloadPopup = (returnFocusEl = null) => {
+      if (!(certificatePopupEl instanceof HTMLElement)) {
+        return;
+      }
+      const returnId = returnFocusEl instanceof HTMLElement && returnFocusEl.id
+        ? returnFocusEl.id
+        : "helmet-send-image";
+      certificateReturnFocusId = returnId;
+      certificatePopupEl.dataset.returnId = returnId;
+      openHelmetSendPopup(certificatePopupEl, certificatePopupConfirmEl);
+    };
+
     const openTargetsHelpPopup = () => {
       if (!(targetsHelpPopupEl instanceof HTMLElement)) {
         return;
@@ -4101,6 +4231,14 @@ function renderControls(controlType) {
       if (returnFocusEl instanceof HTMLElement) {
         returnFocusEl.focus();
       }
+    };
+
+    const closeCertificateDownloadPopup = () => {
+      if (!(certificatePopupEl instanceof HTMLElement)) {
+        return;
+      }
+      const returnEl = document.getElementById(certificateReturnFocusId);
+      closeHelmetSendPopup(certificatePopupEl, returnEl);
     };
 
     sendPopupPrivacyLinks.forEach((linkEl) => {
@@ -4262,6 +4400,7 @@ function renderControls(controlType) {
         if (sendPopupTextEl instanceof HTMLElement) {
           closeHelmetSendPopup(sendPopupTextEl, sendTextEl);
         }
+        openCertificateDownloadPopup(sendTextEl);
       } catch (error) {
         const message = error instanceof Error ? error.message : "Invio non riuscito.";
         showUploadToast(message, "error");
@@ -4390,6 +4529,7 @@ function renderControls(controlType) {
         if (sendPopupImageEl instanceof HTMLElement) {
           closeHelmetSendPopup(sendPopupImageEl, sendImageEl);
         }
+        openCertificateDownloadPopup(sendImageEl);
       } catch (error) {
         const message = error instanceof Error ? error.message : "Invio non riuscito.";
         showUploadToast(message, "error");
@@ -4512,6 +4652,35 @@ function renderControls(controlType) {
         event.preventDefault();
         event.stopPropagation();
         void performHelmetImageDelete();
+      });
+    }
+
+    if (certificatePopupCancelEl instanceof HTMLButtonElement) {
+      certificatePopupCancelEl.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        playChoiceSound("no");
+        closeCertificateDownloadPopup();
+      });
+    }
+
+    if (certificatePopupConfirmEl instanceof HTMLButtonElement) {
+      certificatePopupConfirmEl.addEventListener("click", async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        playChoiceSound("yes");
+        certificatePopupConfirmEl.disabled = true;
+        try {
+          const deviceCode = persistedDeviceCode || (await ensureDeviceCode());
+          await downloadDeviceCertificate(deviceCode);
+          showUploadToast("Download attestato avviato.", "success");
+          closeCertificateDownloadPopup();
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Download attestato non riuscito.";
+          showUploadToast(message, "error");
+        } finally {
+          certificatePopupConfirmEl.disabled = false;
+        }
       });
     }
 
