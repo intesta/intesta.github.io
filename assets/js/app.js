@@ -867,18 +867,6 @@ if (window.location.hash === "#/admin") {
       return;
     }
 
-    const certificateEngine = normalizeCertificateEngine(adminState.certificateEngine);
-    const certificateEngineLabel = certificateEngine === "fpdi"
-      ? "Certificato: FPDI ON"
-      : certificateEngine === "fallback"
-        ? "Certificato: fallback"
-        : "Certificato: stato sconosciuto";
-    const certificateEngineClass = certificateEngine === "fpdi"
-      ? "admin-cert-engine admin-cert-engine--fpdi"
-      : certificateEngine === "fallback"
-        ? "admin-cert-engine admin-cert-engine--fallback"
-        : "admin-cert-engine";
-
     adminRoot.innerHTML = `
       <section class="admin-shell">
         <header class="admin-header">
@@ -901,7 +889,6 @@ if (window.location.hash === "#/admin") {
           </div>
           <div class="admin-header-center">
             <h1 class="admin-title">Moderazione invii</h1>
-            <p class="${certificateEngineClass}">${escapeHtml(certificateEngineLabel)}</p>
             <p class="admin-pending">
               Da approvare
               <span class="admin-count-dot">${adminState.pendingCount}</span>
