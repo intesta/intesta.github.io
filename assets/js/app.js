@@ -1830,44 +1830,44 @@ const DEVICE_CODE_STORAGE_KEY = "intesta_device_code_v1";
 const ENTRY_SOURCE_QUERY_PARAM = "entrySource";
 const HELMET_UPLOAD_ENDPOINTS = [
   "https://foxly.it/intesta_api/helmet-submissions",
-  "https://foxly.it/intesta_api/public/helmet-submissions",
-  "./intesta_api/helmet-submissions"
+  "./intesta_api/helmet-submissions",
+  "https://foxly.it/intesta_api/public/helmet-submissions"
 ];
 const DEVICE_REGISTER_ENDPOINTS = [
   "https://foxly.it/intesta_api/devices/register",
-  "https://foxly.it/intesta_api/public/devices/register",
-  "./intesta_api/devices/register"
+  "./intesta_api/devices/register",
+  "https://foxly.it/intesta_api/public/devices/register"
 ];
 const DEVICE_SUBMISSION_STATUS_ENDPOINTS = [
   "https://foxly.it/intesta_api/devices/submission-status",
-  "https://foxly.it/intesta_api/public/devices/submission-status",
-  "./intesta_api/devices/submission-status"
+  "./intesta_api/devices/submission-status",
+  "https://foxly.it/intesta_api/public/devices/submission-status"
 ];
 const DEVICE_DELETE_SUBMISSION_ENDPOINTS = [
   "https://foxly.it/intesta_api/devices/delete-submission",
-  "https://foxly.it/intesta_api/public/devices/delete-submission",
-  "./intesta_api/devices/delete-submission"
+  "./intesta_api/devices/delete-submission",
+  "https://foxly.it/intesta_api/public/devices/delete-submission"
 ];
 const DEVICE_CONTACT_ENDPOINTS = [
   "https://foxly.it/intesta_api/devices/contact",
-  "https://foxly.it/intesta_api/public/devices/contact",
-  "./intesta_api/devices/contact"
+  "./intesta_api/devices/contact",
+  "https://foxly.it/intesta_api/public/devices/contact"
 ];
 const DEVICE_CERTIFICATE_ENDPOINTS = [
   "https://foxly.it/intesta_api/devices/certificate",
-  "https://foxly.it/intesta_api/public/devices/certificate",
-  "./intesta_api/devices/certificate"
+  "./intesta_api/devices/certificate",
+  "https://foxly.it/intesta_api/public/devices/certificate"
 ];
 const DEVICE_CONTACT_STORAGE_KEY = "intesta_device_contact_v1";
 const GALLERY_APPROVED_IMAGE_ENDPOINTS = [
   "https://foxly.it/intesta_api/gallery/approved-images",
-  "https://foxly.it/intesta_api/public/gallery/approved-images",
-  "./intesta_api/gallery/approved-images"
+  "./intesta_api/gallery/approved-images",
+  "https://foxly.it/intesta_api/public/gallery/approved-images"
 ];
 const GALLERY_LIKE_ENDPOINTS = [
   "https://foxly.it/intesta_api/gallery/like",
-  "https://foxly.it/intesta_api/public/gallery/like",
-  "./intesta_api/gallery/like"
+  "./intesta_api/gallery/like",
+  "https://foxly.it/intesta_api/public/gallery/like"
 ];
 
 const slideEls = slides.map((slideData) => {
@@ -2598,7 +2598,7 @@ async function submitHelmetContribution(payload) {
         : `Upload non riuscito (HTTP ${response.status}).`;
       lastError = new Error(message);
 
-      if (response.status !== 404) {
+      if (response.status !== 404 && response.status !== 405) {
         throw lastError;
       }
     } catch (error) {

@@ -1,4 +1,4 @@
-const CACHE_NAME = "intesta-shell-v3";
+const CACHE_NAME = "intesta-shell-v4";
 const URLS_TO_CACHE = [
   "./",
   "./index.html",
